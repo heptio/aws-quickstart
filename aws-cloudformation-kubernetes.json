@@ -185,7 +185,10 @@
                 {  
                   "Ref":"ClusterKey"
                 },
-                "\n"
+                "\n",
+                "# Add-on for network Weave (https://github.com/weaveworks/weave-kube)\n",
+                "# so pods can communicate\n",
+                "kubectl apply -f https://git.io/weave-kube\n"
               ]
             ]
           }
