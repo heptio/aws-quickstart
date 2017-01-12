@@ -3,7 +3,7 @@
   "Description":"Kubernetes AWS CloudFormation Sample Template: Create a Kubernetes cluster with an Amazon EC2 instance as the master node and an AutoScalingGroup with two more EC2 instances that join the Kubernetes cluster as nodes. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for all instances to give you SSH access. **WARNING** This template creates three Amazon EC2 instances. You will be billed for the AWS resources used if you create a stack from this template. **CREDIT** This template is provided courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon Campbell.",
   "Parameters":{  
     "KeyName":{  
-      "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instance; will be supplied when this template is deployed",
+      "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instance",
       "Type":"AWS::EC2::KeyPair::KeyName",
       "ConstraintDescription":"must be the name of an existing EC2 KeyPair."
     },
@@ -13,7 +13,7 @@
       "ConstraintDescription":"must be a secure string, which will be used as the key for this cluster, of the format <6 character string>.<16 character string>."
     },
     "InstanceType":{  
-      "Description":"WebServer EC2 instance type",
+      "Description":"EC2 instance type for the cluster",
       "Type":"String",
       "Default":"t2.medium",
       "AllowedValues":[  
