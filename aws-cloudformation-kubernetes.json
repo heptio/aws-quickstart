@@ -1,14 +1,14 @@
 {  
   "AWSTemplateFormatVersion":"2010-09-09",
-  "Description":"Kubernetes AWS CloudFormation Sample Template: Create a Kubernetes cluster with an Amazon EC2 instance as the master node and an AutoScalingGroup with two more EC2 instances that join the Kubernetes cluster as nodes. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for all instances to give you SSH access. **WARNING** This template creates three Amazon EC2 instances. You will be billed for the AWS resources used if you create a stack from this template. **CREDIT** This template is provided courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon Campbell.",
+  "Description":"Kubernetes AWS CloudFormation Template: Create a Kubernetes cluster. The master node is an auto-recovering Amazon EC2 instance. Two more EC2 instances in an AutoScalingGroup join the Kubernetes cluster as nodes. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for all instances to give you SSH access. Next steps: http://jump.heptio.com/aws-qs-next **WARNING** This template creates three Amazon EC2 instances. You will be billed for the AWS resources used if you create a stack from this template. **CREDIT** This template is provided courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon Campbell.",
   "Parameters":{  
     "KeyName":{  
-      "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Description":"Existing EC2 KeyPair for SSH access",
       "Type":"AWS::EC2::KeyPair::KeyName",
       "ConstraintDescription":"must be the name of an existing EC2 KeyPair."
     },
     "ClusterKey":{  
-      "Description":"Generate this key locally (requires Python) with: python -c 'import random; print \"%0x.%0x\" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'",
+      "Description":"Generate this key (requires Python): python -c 'import random; print \"%0x.%0x\" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'",
       "Type":"String",
       "ConstraintDescription":"must be a secure string, which will be used as the key for this cluster, of the format <6 character string>.<16 character string>."
     },
@@ -75,7 +75,7 @@
       "ConstraintDescription":"must be a valid EC2 instance type."
     },
     "SSHLocation":{  
-      "Description":"The IP address range that can be used to SSH to the EC2 instances",
+      "Description":"IP address range that can be used to SSH to the EC2 instances",
       "Type":"String",
       "MinLength":"9",
       "MaxLength":"18",
@@ -85,7 +85,7 @@
     },
     "K8sNodeCapacity":{  
       "Default":"2",
-      "Description":"The initial number of K8sServer instances",
+      "Description":"Initial number of nodes",
       "Type":"Number",
       "MinValue":"1",
       "MaxValue":"3",
@@ -202,6 +202,41 @@
             "64"
           ]
         }
+      }
+    },
+    "RecoveryTestAlarm":{  
+      "Type":"AWS::CloudWatch::Alarm",
+      "Properties":{  
+        "AlarmDescription":"Trigger a recovery when instance status check fails for 5 consecutive minutes.",
+        "Namespace":"AWS/EC2",
+        "MetricName":"StatusCheckFailed_System",
+        "Statistic":"Minimum",
+        "Period":"60",
+        "EvaluationPeriods":"5",
+        "ComparisonOperator":"GreaterThanThreshold",
+        "Threshold":"0",
+        "AlarmActions":[  
+          {  
+            "Fn::Join":[  
+              "",
+              [  
+                "arn:aws:automate:",
+                {  
+                  "Ref":"AWS::Region"
+                },
+                ":ec2:recover"
+              ]
+            ]
+          }
+        ],
+        "Dimensions":[  
+          {  
+            "Name":"InstanceId",
+            "Value":{  
+              "Ref":"K8sMasterInstance"
+            }
+          }
+        ]
       }
     },
     "K8sNodeGroup":{  
@@ -376,6 +411,31 @@
       "Value":{  
         "Ref":"ClusterKey"
       }
+    },
+    "JoinNodes":{  
+      "Description":"Command to join more nodes to this cluster",
+      "Value":{  
+        "Fn::Join":[  
+          "",
+          [  
+            "kubeadm join --token=",
+            {  
+              "Ref":"ClusterKey"
+            },
+            " ",
+            {  
+              "Fn::GetAtt":[  
+                "K8sMasterInstance",
+                "PrivateIp"
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    "NextSteps":{  
+      "Description":"Verify your cluster and deploy a test application. Instructions at http://jump.heptio.com/aws-qs-next",
+      "Value":"http://jump.heptio.com/aws-qs-next"
     }
   }
 }
