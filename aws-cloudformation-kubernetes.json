@@ -186,9 +186,9 @@
                   "Ref":"ClusterKey"
                 },
                 "\n",
-                "# Add-on for network Weave (https://github.com/weaveworks/weave-kube)\n",
+                "# Add-on for network Calico (http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/)\n",
                 "# so pods can communicate\n",
-                "kubectl apply -f https://git.io/weave-kube\n"
+                "kubectl apply -f http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml\n"
               ]
             ]
           }
