@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "ClusterKey",
+        "ParameterValue": "a764c5.4afde84872e52533"
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.medium"
+    },
+    {
+        "ParameterKey": "K8sNodeCapacity",
+        "ParameterValue": "2"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "cikey"
+    },
+    {
+        "ParameterKey": "SSHLocation",
+        "ParameterValue": "1.2.3.4/32"
+    }
+]
