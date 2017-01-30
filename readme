@@ -1,9 +1,19 @@
-Improvements:
+##Release Notes:
 
-Use Calico instead of Weave for networking between pods
+DONE Use Calico instead of Weave for networking between pods
 
-Enable cloud provider to connect to other cloud resources like storage
+DONE Use auto recovery for master node
 
-Load balancing or auto-scaling for master node - how do we extract the IP?
+##TODO:
 
-What do we do about storage for /etcd?
+Wrap everything in a VPC
+
+Generate the cluster key from a script
+
+Auth ID
+
+Finish formatting the repo so we can get deep feedback on the PDF
+
+Integrate with `--cloud-provider` so we make better use of AWS resources.  We should be able to attach an EBS volume to a pod and we should be able to use service with type=loadbalancer.
+
+Improve our suggested test case; `sock-shop` doesn't test everything
