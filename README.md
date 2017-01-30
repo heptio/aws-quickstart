@@ -17,3 +17,5 @@
 * [ ] Integrate with `--cloud-provider` so we make better use of AWS resources.  We should be able to attach an EBS volume to a pod and we should be able to use service with type=loadbalancer.
 
 * [ ] Improve our suggested test case; `sock-shop` doesn't test everything
+
+* [ ] Research Cloudwatch integration
