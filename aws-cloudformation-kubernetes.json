@@ -142,6 +142,9 @@
     "K8sMasterInstance":{  
       "Type":"AWS::EC2::Instance",
       "Properties":{  
+        "IamInstanceProfile":{  
+          "Ref":"MasterInstanceProfile"
+        },
         "InstanceType":{  
           "Ref":"InstanceType"
         },
@@ -181,7 +184,7 @@
                 "# reset kubeadm (workaround for kubelet package presence)\n",
                 "kubeadm reset\n",
                 "# Initialize master node\n",
-                "kubeadm init --token=",
+                "kubeadm init --cloud-provider=aws --token=",
                 {  
                   "Ref":"ClusterKey"
                 },
@@ -271,6 +274,9 @@
     "LaunchConfig":{  
       "Type":"AWS::AutoScaling::LaunchConfiguration",
       "Properties":{  
+        "IamInstanceProfile":{  
+          "Ref":"NodeInstanceProfile"
+        },
         "ImageId":{  
           "Fn::FindInMap":[  
             "RegionMap",
@@ -352,6 +358,123 @@
             "CidrIp":{  
               "Ref":"SSHLocation"
             }
+          }
+        ]
+      }
+    },
+    "NodeRole":{  
+      "Type":"AWS::IAM::Role",
+      "Properties":{  
+        "AssumeRolePolicyDocument":{  
+          "Version":"2012-10-17",
+          "Statement":[  
+            {  
+              "Effect":"Allow",
+              "Principal":{  
+                "Service":[  
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[  
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[  
+          {  
+            "PolicyName":"node",
+            "PolicyDocument":{  
+              "Version":"2012-10-17",
+              "Statement":[  
+                {  
+                  "Effect":"Allow",
+                  "Action":[  
+                    "ec2:Describe",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "NodeInstanceProfile":{  
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{  
+        "Path":"/",
+        "Roles":[  
+          {  
+            "Ref":"NodeRole"
+          }
+        ]
+      }
+    },
+    "MasterRole":{  
+      "Type":"AWS::IAM::Role",
+      "Properties":{  
+        "AssumeRolePolicyDocument":{  
+          "Version":"2012-10-17",
+          "Statement":[  
+            {  
+              "Effect":"Allow",
+              "Principal":{  
+                "Service":[  
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[  
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[  
+          {  
+            "PolicyName":"master",
+            "PolicyDocument":{  
+              "Version":"2012-10-17",
+              "Statement":[  
+                {  
+                  "Effect":"Allow",
+                  "Action":[  
+                    "ec2:*",
+                    "elasticloadbalancing:*",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:UpdateAutoScalingGroup"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MasterInstanceProfile":{  
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{  
+        "Path":"/",
+        "Roles":[  
+          {  
+            "Ref":"MasterRole"
           }
         ]
       }
