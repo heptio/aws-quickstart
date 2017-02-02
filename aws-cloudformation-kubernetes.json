@@ -7,10 +7,10 @@
       "Type":"AWS::EC2::KeyPair::KeyName",
       "ConstraintDescription":"must be the name of an existing EC2 KeyPair."
     },
-    "ClusterKey":{  
-      "Description":"Generate this key (requires Python): python -c 'import random; print \"%0x.%0x\" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'",
+    "ClusterToken":{  
+      "Description":"Generate this token (requires Python): python -c 'import random; print \"%0x.%0x\" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'",
       "Type":"String",
-      "ConstraintDescription":"must be a secure string, which will be used as the key for this cluster, of the format <6 character string>.<16 character string>."
+      "ConstraintDescription":"must be a secure string, which will be used as the token for this cluster, of the format <6 character string>.<16 character string>."
     },
     "InstanceType":{  
       "Description":"EC2 instance type for the cluster",
@@ -169,6 +169,11 @@
               "",
               [  
                 "#!/bin/bash -v\n",
+                "# Create directory and file to enable --cloud-provider=aws for kubelet\n",
+                "mkdir -p /etc/systemd/system/kubelet.service.d/\n",
+                "cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf\n",
+                "Environment=\"KUBELET_EXTRA_ARGS=--cloud-provider=aws\"\n",
+                "EOF\n",
                 "# Get repository key\n",
                 "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -\n",
                 "# Append key to sources file\n",
@@ -186,12 +191,12 @@
                 "# Initialize master node\n",
                 "kubeadm init --cloud-provider=aws --token=",
                 {  
-                  "Ref":"ClusterKey"
+                  "Ref":"ClusterToken"
                 },
                 "\n",
                 "# Add-on for network Calico (http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/)\n",
                 "# so pods can communicate\n",
-                "kubectl apply -f http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml\n"
+                "kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml\n"
               ]
             ]
           }
@@ -304,6 +309,11 @@
               "",
               [  
                 "#!/bin/bash -v\n",
+                "# Create directory and file to enable --cloud-provider=aws for kubelet\n",
+                "mkdir -p /etc/systemd/system/kubelet.service.d/\n",
+                "cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf\n",
+                "Environment=\"KUBELET_EXTRA_ARGS=--cloud-provider=aws\"\n",
+                "EOF\n",
                 "# Get repository key\n",
                 "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -\n",
                 "# Append key to sources file\n",
@@ -321,7 +331,7 @@
                 "# Join master node\n",
                 "kubeadm join --token=",
                 {  
-                  "Ref":"ClusterKey"
+                  "Ref":"ClusterToken"
                 },
                 " ",
                 {  
@@ -529,10 +539,10 @@
         "Ref":"K8sNodeGroup"
       }
     },
-    "ClusterKey":{  
+    "ClusterToken":{  
       "Description":"Key that allows nodes to join this cluster; keep secret",
       "Value":{  
-        "Ref":"ClusterKey"
+        "Ref":"ClusterToken"
       }
     },
     "JoinNodes":{  
@@ -543,7 +553,7 @@
           [  
             "kubeadm join --token=",
             {  
-              "Ref":"ClusterKey"
+              "Ref":"ClusterToken"
             },
             " ",
             {  
