@@ -224,6 +224,9 @@
     "K8sMasterInstance":{  
       "Type":"AWS::EC2::Instance",
       "Properties":{  
+        "IamInstanceProfile":{  
+          "Ref":"MasterInstanceProfile"
+        },
         "InstanceType":{  
           "Ref":"InstanceType"
         },
@@ -248,6 +251,11 @@
               "",
               [  
                 "#!/bin/bash -v\n",
+                "# Create directory and file to enable --cloud-provider=aws for kubelet\n",
+                "mkdir -p /etc/systemd/system/kubelet.service.d/\n",
+                "cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf\n",
+                "Environment=\"KUBELET_EXTRA_ARGS=--cloud-provider=aws\"\n",
+                "EOF\n",
                 "# Get repository key\n",
                 "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -\n",
                 "# Append key to sources file\n",
@@ -271,7 +279,7 @@
                 "\n",
                 "# Add-on for network Calico (http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/)\n",
                 "# so pods can communicate\n",
-                "kubectl apply -f http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml\n"
+                "kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml\n"
               ]
             ]
           }
@@ -354,6 +362,9 @@
     "LaunchConfig":{  
       "Type":"AWS::AutoScaling::LaunchConfiguration",
       "Properties":{  
+        "IamInstanceProfile":{  
+          "Ref":"NodeInstanceProfile"
+        },
         "ImageId":{  
           "Fn::FindInMap":[  
             "RegionMap",
@@ -381,6 +392,11 @@
               "",
               [  
                 "#!/bin/bash -v\n",
+                "# Create directory and file to enable --cloud-provider=aws for kubelet\n",
+                "mkdir -p /etc/systemd/system/kubelet.service.d/\n",
+                "cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf\n",
+                "Environment=\"KUBELET_EXTRA_ARGS=--cloud-provider=aws\"\n",
+                "EOF\n",
                 "# Get repository key\n",
                 "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -\n",
                 "# Append key to sources file\n",
@@ -436,6 +452,123 @@
             "CidrIp":{  
               "Ref":"SSHLocation"
             }
+          }
+        ]
+      }
+    },
+    "NodeRole":{  
+      "Type":"AWS::IAM::Role",
+      "Properties":{  
+        "AssumeRolePolicyDocument":{  
+          "Version":"2012-10-17",
+          "Statement":[  
+            {  
+              "Effect":"Allow",
+              "Principal":{  
+                "Service":[  
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[  
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[  
+          {  
+            "PolicyName":"node",
+            "PolicyDocument":{  
+              "Version":"2012-10-17",
+              "Statement":[  
+                {  
+                  "Effect":"Allow",
+                  "Action":[  
+                    "ec2:Describe",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "NodeInstanceProfile":{  
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{  
+        "Path":"/",
+        "Roles":[  
+          {  
+            "Ref":"NodeRole"
+          }
+        ]
+      }
+    },
+    "MasterRole":{  
+      "Type":"AWS::IAM::Role",
+      "Properties":{  
+        "AssumeRolePolicyDocument":{  
+          "Version":"2012-10-17",
+          "Statement":[  
+            {  
+              "Effect":"Allow",
+              "Principal":{  
+                "Service":[  
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[  
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[  
+          {  
+            "PolicyName":"master",
+            "PolicyDocument":{  
+              "Version":"2012-10-17",
+              "Statement":[  
+                {  
+                  "Effect":"Allow",
+                  "Action":[  
+                    "ec2:*",
+                    "elasticloadbalancing:*",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:UpdateAutoScalingGroup"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MasterInstanceProfile":{  
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{  
+        "Path":"/",
+        "Roles":[  
+          {  
+            "Ref":"MasterRole"
           }
         ]
       }
@@ -501,6 +634,7 @@
                   "ClusterKey", 
                   "Data" ] 
                 },
+
             " ",
             {  
               "Fn::GetAtt":[  
