@@ -25,3 +25,7 @@
 * [ ] Show how to extract credentials so you can access the cluster from your laptop without ssh to a VM << Heptio
 
 * [ ] Show how to upload images to the AWS registry and use them with k8s cluster (That will enable the core flow of "build a container, push it to registry, launch on k8s") << Heptio
+
+* [ ] Make sure all the nodes are in the same AZ << Heptio
+
+* [ ] Advise users to run multiple clusters for a multi-AZ setup << Heptio

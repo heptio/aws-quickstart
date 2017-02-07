@@ -74,6 +74,11 @@
       ],
       "ConstraintDescription":"must be a valid EC2 instance type."
     },
+    "AvailabilityZone":{  
+      "Description":"The Availability Zone for this cluster.  Generally, Heptio recommends that you run a cluster per AZ and use tooling to coordinate across AZs.",
+      "Type":"AWS::EC2::AvailabilityZone::Name",
+      "ConstraintDescription":"must be the name of an AWS Availability Zone"
+    },
     "SSHLocation":{  
       "Description":"IP address range that can be used to SSH to the EC2 instances",
       "Type":"String",
@@ -141,7 +146,10 @@
   "Resources":{  
     "K8sMasterInstance":{  
       "Type":"AWS::EC2::Instance",
-      "Properties":{  
+      "Properties":{
+        "AvailabilityZone":{  
+          "Ref":"AvailabilityZone"
+        },
         "IamInstanceProfile":{  
           "Ref":"MasterInstanceProfile"
         },
@@ -161,6 +169,12 @@
           {  
             "Key":"Name",
             "Value":"k8s-master"
+          },
+          {  
+            "Key":"KubernetesCluster",
+            "Value":{  
+              "Ref":"AWS::StackName"
+            }
           }
         ],
         "UserData":{  
@@ -172,6 +186,7 @@
                 "# Create directory and file to enable --cloud-provider=aws for kubelet\n",
                 "mkdir -p /etc/systemd/system/kubelet.service.d/\n",
                 "cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf\n",
+                "[Service]\n",
                 "Environment=\"KUBELET_EXTRA_ARGS=--cloud-provider=aws\"\n",
                 "EOF\n",
                 "# Get repository key\n",
@@ -194,7 +209,7 @@
                   "Ref":"ClusterToken"
                 },
                 "\n",
-                "# Add-on for network Calico (http://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/)\n",
+                "# Add-on for network Calico (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)\n",
                 "# so pods can communicate\n",
                 "kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml\n"
               ]
@@ -250,9 +265,11 @@
     "K8sNodeGroup":{  
       "Type":"AWS::AutoScaling::AutoScalingGroup",
       "Properties":{  
-        "AvailabilityZones":{  
-          "Fn::GetAZs":""
-        },
+        "AvailabilityZones":[  
+          {  
+            "Ref":"AvailabilityZone"
+          }
+        ],
         "DesiredCapacity":{  
           "Ref":"K8sNodeCapacity"
         },
@@ -265,6 +282,13 @@
           {  
             "Key":"Name",
             "Value":"k8s-node",
+            "PropagateAtLaunch":"true"
+          },
+          {  
+            "Key":"KubernetesCluster",
+            "Value":{  
+              "Ref":"AWS::StackName"
+            },
             "PropagateAtLaunch":"true"
           }
         ]
@@ -312,6 +336,7 @@
                 "# Create directory and file to enable --cloud-provider=aws for kubelet\n",
                 "mkdir -p /etc/systemd/system/kubelet.service.d/\n",
                 "cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf\n",
+                "[Service]\n",
                 "Environment=\"KUBELET_EXTRA_ARGS=--cloud-provider=aws\"\n",
                 "EOF\n",
                 "# Get repository key\n",
@@ -368,6 +393,131 @@
             "CidrIp":{  
               "Ref":"SSHLocation"
             }
+          }
+        ],
+        "Tags":[
+          {  
+            "Key":"KubernetesCluster",
+            "Value":{
+              "Ref":"AWS::StackName"
+            }
+          }
+        ]
+      }
+    },
+    "NodeRole":{  
+      "Type":"AWS::IAM::Role",
+      "Properties":{  
+        "AssumeRolePolicyDocument":{  
+          "Version":"2012-10-17",
+          "Statement":[  
+            {  
+              "Effect":"Allow",
+              "Principal":{  
+                "Service":[  
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[  
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[  
+          {  
+            "PolicyName":"node",
+            "PolicyDocument":{  
+              "Version":"2012-10-17",
+              "Statement":[  
+                {  
+                  "Effect":"Allow",
+                  "Action":[  
+                    "ec2:Describe*",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "NodeInstanceProfile":{  
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{  
+        "Path":"/",
+        "Roles":[  
+          {  
+            "Ref":"NodeRole"
+          }
+        ]
+      }
+    },
+    "MasterRole":{  
+      "Type":"AWS::IAM::Role",
+      "Properties":{  
+        "AssumeRolePolicyDocument":{  
+          "Version":"2012-10-17",
+          "Statement":[  
+            {  
+              "Effect":"Allow",
+              "Principal":{  
+                "Service":[  
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[  
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[  
+          {  
+            "PolicyName":"master",
+            "PolicyDocument":{  
+              "Version":"2012-10-17",
+              "Statement":[  
+                {  
+                  "Effect":"Allow",
+                  "Action":[  
+                    "ec2:*",
+                    "elasticloadbalancing:*",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:UpdateAutoScalingGroup"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MasterInstanceProfile":{  
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{  
+        "Path":"/",
+        "Roles":[  
+          {  
+            "Ref":"MasterRole"
           }
         ]
       }
