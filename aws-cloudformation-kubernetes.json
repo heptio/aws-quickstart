@@ -398,7 +398,7 @@
         "Tags":[
           {  
             "Key":"KubernetesCluster",
-            "Value":{  
+            "Value":{
               "Ref":"AWS::StackName"
             }
           }
