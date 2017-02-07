@@ -1,0 +1,481 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluster.
+  The master node is an auto-recovering Amazon EC2 instance. Two more EC2
+  instances in an AutoScalingGroup join the Kubernetes cluster as nodes. The
+  AMI is chosen based on the region in which the stack is run. This example
+  creates an EC2 security group for all instances to give you SSH access. Next
+  steps: http://jump.heptio.com/aws-qs-next **WARNING** This template creates
+  three Amazon EC2 instances. You will be billed for the AWS resources used if
+  you create a stack from this template. **CREDIT** This template is provided
+  courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon
+  Campbell.'
+
+Parameters:
+  KeyName:
+    Description: Existing EC2 KeyPair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  ClusterToken:
+    Description: 'Generate this token (requires Python): python -c ''import random;
+      print "%0x.%0x" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'''
+    Type: String
+    ConstraintDescription: must be a secure string, which will be used as the token
+      for this cluster, of the format <6 character string>.<16 character string>.
+
+  InstanceType:
+    Description: EC2 instance type for the cluster
+    Type: String
+    Default: t2.medium
+    AllowedValues:
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - c1.medium
+    - c1.xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+  AvailabilityZone:
+    Description: The Availability Zone for this cluster.  Generally, Heptio recommends
+      that you run a cluster per AZ and use tooling to coordinate across AZs.
+    Type: AWS::EC2::AvailabilityZone::Name
+    ConstraintDescription: must be the name of an AWS Availability Zone
+  SSHLocation:
+    Description: IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  K8sNodeCapacity:
+    Default: '2'
+    Description: Initial number of nodes
+    Type: Number
+    MinValue: '1'
+    MaxValue: '3'
+    ConstraintDescription: must be between 1 and 3 EC2 instances.
+Mappings:
+  RegionMap:
+    ap-northeast-1:
+      '64': ami-18afc47f
+    ap-northeast-2:
+      '64': ami-93d600fd
+    ap-south-1:
+      '64': ami-dd3442b2
+    ap-southeast-1:
+      '64': ami-87b917e4
+    ap-southeast-2:
+      '64': ami-e6b58e85
+    ca-central-1:
+      '64': ami-7112a015
+    eu-central-1:
+      '64': ami-fe408091
+    eu-west-1:
+      '64': ami-ca80a0b9
+    eu-west-2:
+      '64': ami-ede2e889
+    sa-east-1:
+      '64': ami-e075ed8c
+    us-east-1:
+      '64': ami-9dcfdb8a
+    us-east-2:
+      '64': ami-fcc19b99
+    us-west-1:
+      '64': ami-b05203d0
+    us-west-2:
+      '64': ami-b2d463d2
+
+Resources:
+  K8sMasterInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone:
+        Ref: AvailabilityZone
+      IamInstanceProfile:
+        Ref: MasterInstanceProfile
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyName
+      SecurityGroups:
+      - default
+      - Ref: allow22
+      Tags:
+      - Key: Name
+        Value: k8s-master
+      - Key: KubernetesCluster
+        Value:
+          Ref: AWS::StackName
+      UserData:
+        Fn::Base64:
+          # Nested arrays here: Fn::Join takes a first argument of a join
+          # string (in this case ''), and the second argument is the array
+          # itself.
+          Fn::Join:
+          - ''
+          -
+            - |-
+              #!/bin/bash -v
+              # Create directory and file to enable --cloud-provider=aws for kubelet
+              mkdir -p /etc/systemd/system/kubelet.service.d/
+              cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+              [Service]
+              Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+              EOF
+
+              # Get repository key
+              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+              # Append key to sources file
+              cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+              deb http://apt.kubernetes.io/ kubernetes-xenial main
+              EOF
+
+              # Update package lists
+              apt-get update
+
+              # Install docker if you don't have it already.
+              apt-get install -y docker.io
+
+              # Install kubernetes tools
+              apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+              # reset kubeadm (workaround for kubelet package presence)
+              kubeadm reset
+
+              # Initialize master node
+              kubeadm init --cloud-provider=aws --token=
+
+            # Embed the provided cluster token in the script, (no newline from
+            # above since we're using |-)
+            - { Ref: ClusterToken }
+            - "\n"
+
+            - |
+              # Add-on for network Calico
+              # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
+              # so pods can communicate
+              kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml
+
+      ImageId:
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - '64'
+
+  RecoveryTestAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Trigger a recovery when instance status check fails for 5
+        consecutive minutes.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: '60'
+      EvaluationPeriods: '5'
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: '0'
+      AlarmActions:
+      - Fn::Join:
+        - ''
+        - - 'arn:aws:automate:'
+          - Ref: AWS::Region
+          - ":ec2:recover"
+      Dimensions:
+      - Name: InstanceId
+        Value:
+          Ref: K8sMasterInstance
+
+  K8sNodeGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+      - Ref: AvailabilityZone
+      DesiredCapacity:
+        Ref: K8sNodeCapacity
+      LaunchConfigurationName:
+        Ref: LaunchConfig
+      MinSize: '1'
+      MaxSize: '3'
+      Tags:
+      - Key: Name
+        Value: k8s-node
+        PropagateAtLaunch: 'true'
+      - Key: KubernetesCluster
+        Value:
+          Ref: AWS::StackName
+        PropagateAtLaunch: 'true'
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        MaxBatchSize: '1'
+
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile:
+        Ref: NodeInstanceProfile
+      ImageId:
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - '64'
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyName
+      SecurityGroups:
+      - default
+      - Ref: allow22
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          -
+            - |-
+              #!/bin/bash -v
+
+              # Create directory and file to enable --cloud-provider=aws for kubelet
+              mkdir -p /etc/systemd/system/kubelet.service.d/
+
+              cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+              [Service]
+              Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws
+              EOF
+
+              # Get repository key
+              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+              # Append key to sources file
+              cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+              deb http://apt.kubernetes.io/ kubernetes-xenial main
+              EOF
+
+              # Update package lists
+              apt-get update
+
+              # Install docker if you don't have it already.
+              apt-get install -y docker.io
+
+              # Install kubernetes tools
+              apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+              # reset kubeadm (workaround for kubelet package presence)
+              kubeadm reset
+
+              # Join master node
+              kubeadm join --token=
+
+            - { Ref: ClusterToken }
+            - " "
+            - Fn::GetAtt:
+              - K8sMasterInstance
+              - PrivateIp
+            - "\n"
+
+  # Open up port 22 for SSH into each machine
+  allow22:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: SSHLocation
+
+      # Security Groups must be tagged with KubernetesCluster=<cluster> so that
+      # they can coexist in the same VPC
+      Tags:
+      - Key: KubernetesCluster
+        Value:
+          Ref: AWS::StackName
+
+  NodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: node
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:Describe*
+            - ecr:GetAuthorizationToken
+            - ecr:BatchCheckLayerAvailability
+            - ecr:GetDownloadUrlForLayer
+            - ecr:GetRepositoryPolicy
+            - ecr:DescribeRepositories
+            - ecr:ListImages
+            - ecr:BatchGetImage
+            Resource: "*"
+
+  NodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: NodeRole
+
+  MasterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: master
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:*
+            - elasticloadbalancing:*
+            - ecr:GetAuthorizationToken
+            - ecr:BatchCheckLayerAvailability
+            - ecr:GetDownloadUrlForLayer
+            - ecr:GetRepositoryPolicy
+            - ecr:DescribeRepositories
+            - ecr:ListImages
+            - ecr:BatchGetImage
+            - autoscaling:DescribeAutoScalingGroups
+            - autoscaling:UpdateAutoScalingGroup
+            Resource: "*"
+
+  MasterInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: MasterRole
+
+Outputs:
+  MasterInstanceId:
+    Description: InstanceId of the master EC2 instance
+    Value:
+      Ref: K8sMasterInstance
+
+  MasterAZ:
+    Description: Availability Zone of the master
+    Value:
+      Fn::GetAtt:
+      - K8sMasterInstance
+      - AvailabilityZone
+
+  MasterPublicDNS:
+    Description: Public DNSName of the master
+    Value:
+      Fn::GetAtt:
+      - K8sMasterInstance
+      - PublicDnsName
+
+  MasterPublicIP:
+    Description: Public IP address of the master
+    Value:
+      Fn::GetAtt:
+      - K8sMasterInstance
+      - PublicIp
+
+  MasterPrivateIP:
+    Description: Private IP address of the master
+    Value:
+      Fn::GetAtt:
+      - K8sMasterInstance
+      - PrivateIp
+
+  NodeGroupInstanceId:
+    Description: InstanceId of the newly created NodeGroup
+    Value:
+      Ref: K8sNodeGroup
+
+  ClusterToken:
+    Description: Key that allows nodes to join this cluster; keep secret
+    Value:
+      Ref: ClusterToken
+
+  JoinNodes:
+    Description: Command to join more nodes to this cluster
+    Value:
+      Fn::Join:
+      - ''
+      - - kubeadm join --token=
+        - Ref: ClusterToken
+        - " "
+        - Fn::GetAtt:
+          - K8sMasterInstance
+          - PrivateIp
+
+  NextSteps:
+    Description: Verify your cluster and deploy a test application. Instructions at
+      http://jump.heptio.com/aws-qs-next
+    Value: http://jump.heptio.com/aws-qs-next
