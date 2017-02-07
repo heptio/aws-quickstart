@@ -1,25 +1,29 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluster.
-  The master node is an auto-recovering Amazon EC2 instance. Two more EC2 instances
-  in an AutoScalingGroup join the Kubernetes cluster as nodes. The AMI is chosen based
-  on the region in which the stack is run. This example creates an EC2 security group
-  for all instances to give you SSH access. Next steps: http://jump.heptio.com/aws-qs-next
-  **WARNING** This template creates three Amazon EC2 instances. You will be billed
-  for the AWS resources used if you create a stack from this template. **CREDIT**
-  This template is provided courtesy of Heptio (https://www.heptio.com/), by Joe Beda
-  and Sharon Campbell.'
+  The master node is an auto-recovering Amazon EC2 instance. Two more EC2
+  instances in an AutoScalingGroup join the Kubernetes cluster as nodes. The
+  AMI is chosen based on the region in which the stack is run. This example
+  creates an EC2 security group for all instances to give you SSH access. Next
+  steps: http://jump.heptio.com/aws-qs-next **WARNING** This template creates
+  three Amazon EC2 instances. You will be billed for the AWS resources used if
+  you create a stack from this template. **CREDIT** This template is provided
+  courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon
+  Campbell.'
+
 Parameters:
   KeyName:
     Description: Existing EC2 KeyPair for SSH access
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
   ClusterToken:
     Description: 'Generate this token (requires Python): python -c ''import random;
       print "%0x.%0x" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'''
     Type: String
     ConstraintDescription: must be a secure string, which will be used as the token
       for this cluster, of the format <6 character string>.<16 character string>.
+
   InstanceType:
     Description: EC2 instance type for the cluster
     Type: String
@@ -130,6 +134,7 @@ Mappings:
       '64': ami-b05203d0
     us-west-2:
       '64': ami-b2d463d2
+
 Resources:
   K8sMasterInstance:
     Type: AWS::EC2::Instance
@@ -153,68 +158,61 @@ Resources:
           Ref: AWS::StackName
       UserData:
         Fn::Base64:
+          # Nested arrays here: Fn::Join takes a first argument of a join
+          # string (in this case ''), and the second argument is the array
+          # itself.
           Fn::Join:
           - ''
-          - - "#!/bin/bash -v\n"
-            - "# Create directory and file to enable --cloud-provider=aws for kubelet\n"
-            - 'mkdir -p /etc/systemd/system/kubelet.service.d/
+          -
+            - |-
+              #!/bin/bash -v
+              # Create directory and file to enable --cloud-provider=aws for kubelet
+              mkdir -p /etc/systemd/system/kubelet.service.d/
+              cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+              [Service]
+              Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+              EOF
 
-'
-            - 'cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+              # Get repository key
+              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
-'
-            - "[Service]\n"
-            - 'Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+              # Append key to sources file
+              cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+              deb http://apt.kubernetes.io/ kubernetes-xenial main
+              EOF
 
-'
-            - 'EOF
+              # Update package lists
+              apt-get update
 
-'
-            - "# Get repository key\n"
-            - 'curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key
-              add -
+              # Install docker if you don't have it already.
+              apt-get install -y docker.io
 
-'
-            - "# Append key to sources file\n"
-            - 'cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+              # Install kubernetes tools
+              apt-get install -y kubelet kubeadm kubectl kubernetes-cni
 
-'
-            - 'deb http://apt.kubernetes.io/ kubernetes-xenial main
+              # reset kubeadm (workaround for kubelet package presence)
+              kubeadm reset
 
-'
-            - 'EOF
+              # Initialize master node
+              kubeadm init --cloud-provider=aws --token=
 
-'
-            - "# Update package lists\n"
-            - 'apt-get update
-
-'
-            - "# Install docker if you don't have it already.\n"
-            - 'apt-get install -y docker.io
-
-'
-            - "# Install kubernetes tools\n"
-            - 'apt-get install -y kubelet kubeadm kubectl kubernetes-cni
-
-'
-            - "# reset kubeadm (workaround for kubelet package presence)\n"
-            - 'kubeadm reset
-
-'
-            - "# Initialize master node\n"
-            - kubeadm init --cloud-provider=aws --token=
-            - Ref: ClusterToken
+            # Embed the provided cluster token in the script, (no newline from
+            # above since we're using |-)
+            - { Ref: ClusterToken }
             - "\n"
-            - "# Add-on for network Calico (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)\n"
-            - "# so pods can communicate\n"
-            - 'kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml
 
-'
+            - |
+              # Add-on for network Calico
+              # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
+              # so pods can communicate
+              kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml
+
       ImageId:
         Fn::FindInMap:
         - RegionMap
         - Ref: AWS::Region
         - '64'
+
   RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -237,6 +235,7 @@ Resources:
       - Name: InstanceId
         Value:
           Ref: K8sMasterInstance
+
   K8sNodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -260,6 +259,7 @@ Resources:
       AutoScalingRollingUpdate:
         MinInstancesInService: '1'
         MaxBatchSize: '1'
+
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -281,60 +281,49 @@ Resources:
         Fn::Base64:
           Fn::Join:
           - ''
-          - - "#!/bin/bash -v\n"
-            - "# Create directory and file to enable --cloud-provider=aws for kubelet\n"
-            - 'mkdir -p /etc/systemd/system/kubelet.service.d/
+          -
+            - |-
+              #!/bin/bash -v
 
-'
-            - 'cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+              # Create directory and file to enable --cloud-provider=aws for kubelet
+              mkdir -p /etc/systemd/system/kubelet.service.d/
 
-'
-            - "[Service]\n"
-            - 'Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+              cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+              [Service]
+              Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws
+              EOF
 
-'
-            - 'EOF
+              # Get repository key
+              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
-'
-            - "# Get repository key\n"
-            - 'curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key
-              add -
+              # Append key to sources file
+              cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+              deb http://apt.kubernetes.io/ kubernetes-xenial main
+              EOF
 
-'
-            - "# Append key to sources file\n"
-            - 'cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+              # Update package lists
+              apt-get update
 
-'
-            - 'deb http://apt.kubernetes.io/ kubernetes-xenial main
+              # Install docker if you don't have it already.
+              apt-get install -y docker.io
 
-'
-            - 'EOF
+              # Install kubernetes tools
+              apt-get install -y kubelet kubeadm kubectl kubernetes-cni
 
-'
-            - "# Update package lists\n"
-            - 'apt-get update
+              # reset kubeadm (workaround for kubelet package presence)
+              kubeadm reset
 
-'
-            - "# Install docker if you don't have it already.\n"
-            - 'apt-get install -y docker.io
+              # Join master node
+              kubeadm join --token=
 
-'
-            - "# Install kubernetes tools\n"
-            - 'apt-get install -y kubelet kubeadm kubectl kubernetes-cni
-
-'
-            - "# reset kubeadm (workaround for kubelet package presence)\n"
-            - 'kubeadm reset
-
-'
-            - "# Join master node\n"
-            - kubeadm join --token=
-            - Ref: ClusterToken
+            - { Ref: ClusterToken }
             - " "
             - Fn::GetAtt:
               - K8sMasterInstance
               - PrivateIp
             - "\n"
+
+  # Open up port 22 for SSH into each machine
   allow22:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -345,10 +334,14 @@ Resources:
         ToPort: '22'
         CidrIp:
           Ref: SSHLocation
+
+      # Security Groups must be tagged with KubernetesCluster=<cluster> so that
+      # they can coexist in the same VPC
       Tags:
       - Key: KubernetesCluster
         Value:
           Ref: AWS::StackName
+
   NodeRole:
     Type: AWS::IAM::Role
     Properties:
@@ -378,12 +371,14 @@ Resources:
             - ecr:ListImages
             - ecr:BatchGetImage
             Resource: "*"
+
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
       - Ref: NodeRole
+
   MasterRole:
     Type: AWS::IAM::Role
     Properties:
@@ -416,49 +411,58 @@ Resources:
             - autoscaling:DescribeAutoScalingGroups
             - autoscaling:UpdateAutoScalingGroup
             Resource: "*"
+
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
       - Ref: MasterRole
+
 Outputs:
   MasterInstanceId:
     Description: InstanceId of the master EC2 instance
     Value:
       Ref: K8sMasterInstance
+
   MasterAZ:
     Description: Availability Zone of the master
     Value:
       Fn::GetAtt:
       - K8sMasterInstance
       - AvailabilityZone
+
   MasterPublicDNS:
     Description: Public DNSName of the master
     Value:
       Fn::GetAtt:
       - K8sMasterInstance
       - PublicDnsName
+
   MasterPublicIP:
     Description: Public IP address of the master
     Value:
       Fn::GetAtt:
       - K8sMasterInstance
       - PublicIp
+
   MasterPrivateIP:
     Description: Private IP address of the master
     Value:
       Fn::GetAtt:
       - K8sMasterInstance
       - PrivateIp
+
   NodeGroupInstanceId:
     Description: InstanceId of the newly created NodeGroup
     Value:
       Ref: K8sNodeGroup
+
   ClusterToken:
     Description: Key that allows nodes to join this cluster; keep secret
     Value:
       Ref: ClusterToken
+
   JoinNodes:
     Description: Command to join more nodes to this cluster
     Value:
@@ -470,6 +474,7 @@ Outputs:
         - Fn::GetAtt:
           - K8sMasterInstance
           - PrivateIp
+
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions at
       http://jump.heptio.com/aws-qs-next
