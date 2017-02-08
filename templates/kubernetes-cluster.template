@@ -251,6 +251,11 @@ Resources:
       - Key: KubernetesCluster
         Value:
           Ref: AWS::StackName
+      ImageId:
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - '64'
       UserData:
         Fn::Base64:
           # Nested arrays here: Fn::Join takes a first argument of a join
@@ -311,11 +316,6 @@ Resources:
                 - Ref: QSS3KeyPrefix
                 - scripts/calico.yaml
             - "\n"
-      ImageId:
-        Fn::FindInMap:
-        - RegionMap
-        - Ref: AWS::Region
-        - '64'
 
   RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
