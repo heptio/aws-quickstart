@@ -11,6 +11,39 @@ Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluste
   courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon
   Campbell.'
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Amazon EC2 Configuration
+      Parameters:
+      - AvailabilityZone
+      - InstanceType
+    - Label:
+        default: Access Configuration
+      Parameters:
+      - SSHLocation
+      - KeyName
+    - Label:
+        default: Kubernetes Configuration
+      Parameters:
+      - ClusterToken
+      - K8sNodeCapacity
+
+    ParameterLabels:
+      KeyName:
+        default: SSH Key
+      AvailabilityZone:
+        default: Availability Zone
+      SSHLocation:
+        default: SSH Ingress Location
+      ClusterToken:
+        default: Cluster Token
+      InstanceType:
+        default: Instance Type
+      K8sNodeCapacity:
+        default: Node Capacity
+
 Parameters:
   KeyName:
     Description: Existing EC2 KeyPair for SSH access
