@@ -17,8 +17,10 @@ Metadata:
     - Label:
         default: Amazon EC2 Configuration
       Parameters:
+      - VPCID
       - AvailabilityZone
       - InstanceType
+      - ClusterSubnetId
     - Label:
         default: Access Configuration
       Parameters:
@@ -38,8 +40,12 @@ Metadata:
     ParameterLabels:
       KeyName:
         default: SSH Key
+      VPCID:
+        default: VPC
       AvailabilityZone:
         default: Availability Zone
+      ClusterSubnetId:
+        default: Subnet
       SSHLocation:
         default: SSH Ingress Location
       ClusterToken:
@@ -62,6 +68,10 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
 
+  VPCID:
+    Description: 'Your VPC to use for this cluster'
+    Type: AWS::EC2::VPC::Id
+
   # Required. This is a new token all nodes will use to join the cluster
   # Kubernetes requires a token of the format xxxxxx.xxxxxxxxxxxxxxxx
   ClusterToken:
@@ -70,6 +80,10 @@ Parameters:
     Type: String
     ConstraintDescription: must be a secure string, which will be used as the token
       for this cluster, of the format <6 character string>.<16 character string>.
+
+  ClusterSubnetId:
+    Description: 'The subnet to use for this cluster.  Must belong to the availability zone above'
+    Type: AWS::EC2::Subnet::Id
 
   # Default is t2.medium. EC2 instance type for the cluster
   # https://aws.amazon.com/ec2/instance-types/
@@ -251,6 +265,11 @@ Resources:
       # Adds our SSH key to the instance
       KeyName:
         Ref: KeyName
+      NetworkInterfaces:
+      - DeleteOnTermination: true
+        DeviceIndex: 0
+        SubnetId:
+          Ref: ClusterSubnetId
       # Joins two security groups: the existing default group, and the new allow22 group
       # The default group allows all instances in the same stack to communicate internally
       # The allow22 group allows external communication on port 22 from a chosen CIDR range
