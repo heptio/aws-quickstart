@@ -253,6 +253,7 @@ Conditions:
     - Ref: ClusterAssociation
     - ''
 
+
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
   KubernetesLogGroup:
@@ -284,12 +285,11 @@ Resources:
         DeviceIndex: 0
         SubnetId:
           Ref: ClusterSubnetId
-      # Joins two security groups: the existing default group, and the new allow22 group
-      # The default group allows all instances in the same stack to communicate internally
-      # The allow22 group allows external communication on port 22 from a chosen CIDR range
-      SecurityGroups:
-      - default
-      - Ref: allow22
+        # Joins two security groups: A default group for cluster communication, and the new allow22 group
+        # The default group allows all instances in the same stack to communicate internally
+        # The allow22 group allows external communication on port 22 from a chosen CIDR range
+        GroupSet:
+        - Ref: ClusterSecGroup
       # Designates a name for this EC2 instance that will appear in the instances list (k8s-master)
       # Tags it with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
@@ -427,6 +427,9 @@ Resources:
       # More cluster sizing
       MinSize: '1'
       MaxSize: '3'
+      # VPC Zone Identifier is the subnets to put the hosts in
+      VPCZoneIdentifier:
+        - Ref: ClusterSubnetId
       # Designates names for these EC2 instances that will appear in the instances list (k8s-node)
       # Tags each node with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
@@ -467,12 +470,11 @@ Resources:
       # Adds our SSH key to the instance
       KeyName:
         Ref: KeyName
-      # Joins two security groups: the existing default group, and the new allow22 group
+      # TODO(udpate doc) Joins two security groups: the existing default group, and the new allow22 group
       # The default group allows all instances in the same stack to communicate internally
       # The allow22 group allows external communication on port 22 from a chosen CIDR range
       SecurityGroups:
-      - default
-      - Ref: allow22
+      - Ref: ClusterSecGroup
       # This is where most of the Kubernetes stuff happens
       # The userdata contains a bash script that bootstraps Kubernetes
       # and useful related software like Docker for containers and Calico networking
@@ -536,22 +538,15 @@ Resources:
             # Join master node
             kubeadm join --token=${ClusterToken} ${K8sMasterInstance.PrivateIp}
 
-  # Open up port 22 for SSH into each machine
-  # The allowed locations are chosen by the user in the SSHLocation parameter
-  allow22:
-    Metadata:
-      Comment: Open up port 22 for SSH into each machine
-      Note: Metadata is a way to add comments that will survive linting
+  # Define the (one) security group for all machines in the cluster.  Keeping
+  # just one security group helps with k8s's cloud-provider=aws integration so
+  # that it knows what security group to manage.
+  ClusterSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH access via port 22
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '22'
-        ToPort: '22'
-        CidrIp:
-          Ref: SSHLocation
-
+      GroupDescription: Enable machines to talk to one another
+      VpcId:
+        Ref: VPCID
       # Security Groups must be tagged with KubernetesCluster=<cluster> so that
       # they can coexist in the same VPC
       Tags:
@@ -580,6 +575,8 @@ Resources:
   # - Open up port 22 for SSH into each machine
   # The allowed locations are chosen by the user in the SSHLocation parameter
   ClusterSecGroupAllow22:
+    Metadata:
+      Comment: Open up port 22 for SSH into each machine
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId:
@@ -710,26 +707,17 @@ Outputs:
     Value:
       Ref: K8sMasterInstance
 
+  ClusterSecGroupId:
+    Description: Security Group for machines in the cluster
+    Value:
+      Ref: ClusterSecGroup
+
   MasterAZ:
     Description: Availability Zone of the master
     Value:
       Fn::GetAtt:
       - K8sMasterInstance
       - AvailabilityZone
-
-  MasterPublicDNS:
-    Description: Public DNSName of the master
-    Value:
-      Fn::GetAtt:
-      - K8sMasterInstance
-      - PublicDnsName
-
-  MasterPublicIP:
-    Description: Public IP address of the master
-    Value:
-      Fn::GetAtt:
-      - K8sMasterInstance
-      - PublicIp
 
   MasterPrivateIP:
     Description: Private IP address of the master
