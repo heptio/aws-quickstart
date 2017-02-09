@@ -11,6 +11,48 @@ Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluste
   courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon
   Campbell.'
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Amazon EC2 Configuration
+      Parameters:
+      - AvailabilityZone
+      - InstanceType
+    - Label:
+        default: Access Configuration
+      Parameters:
+      - SSHLocation
+      - KeyName
+    - Label:
+        default: Kubernetes Configuration
+      Parameters:
+      - ClusterToken
+      - K8sNodeCapacity
+    - Label:
+        default: Advanced
+      Parameters:
+      - QSS3BucketName
+      - QSS3KeyPrefix
+
+    ParameterLabels:
+      KeyName:
+        default: SSH Key
+      AvailabilityZone:
+        default: Availability Zone
+      SSHLocation:
+        default: SSH Ingress Location
+      ClusterToken:
+        default: Cluster Token
+      InstanceType:
+        default: Instance Type
+      K8sNodeCapacity:
+        default: Node Capacity
+      QSS3BucketName:
+        default: S3 Bucket
+      QSS3KeyPrefix:
+        default: S3 Key Prefix
+
 Parameters:
   KeyName:
     Description: Existing EC2 KeyPair for SSH access
@@ -104,36 +146,89 @@ Parameters:
     MinValue: '1'
     MaxValue: '3'
     ConstraintDescription: must be between 1 and 3 EC2 instances.
+  # S3 Bucket configuration: For hosting our own downstream copy of calico
+  # configuration and potentially other things.
+  QSS3BucketName:
+    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    # TODO: quickstart-reference is where this will eventually go, for now we
+    # will override during testing.
+    Default: heptio-aws-quickstart-test
+    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
+      can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
+      with forward slash (/) because they are automatically appended.
+    Default: heptio/kubernetes/latest
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/). It cannot start or end with forward slash (/) because they
+      are automatically appended.
+    Type: String
 Mappings:
   RegionMap:
     ap-northeast-1:
       '64': ami-18afc47f
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     ap-northeast-2:
       '64': ami-93d600fd
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     ap-south-1:
       '64': ami-dd3442b2
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     ap-southeast-1:
       '64': ami-87b917e4
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     ap-southeast-2:
       '64': ami-e6b58e85
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     ca-central-1:
       '64': ami-7112a015
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     eu-central-1:
       '64': ami-fe408091
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     eu-west-1:
       '64': ami-ca80a0b9
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     eu-west-2:
       '64': ami-ede2e889
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     sa-east-1:
       '64': ami-e075ed8c
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     us-east-1:
       '64': ami-9dcfdb8a
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     us-east-2:
       '64': ami-fcc19b99
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     us-west-1:
       '64': ami-b05203d0
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
     us-west-2:
       '64': ami-b2d463d2
+      Partition: aws
+      QuickStartS3URL: https://s3.amazonaws.com
 
 Resources:
   K8sMasterInstance:
@@ -156,6 +251,11 @@ Resources:
       - Key: KubernetesCluster
         Value:
           Ref: AWS::StackName
+      ImageId:
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - '64'
       UserData:
         Fn::Base64:
           # Nested arrays here: Fn::Join takes a first argument of a join
@@ -201,17 +301,21 @@ Resources:
             - { Ref: ClusterToken }
             - "\n"
 
-            - |
+            - |-
               # Add-on for network Calico
               # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
               # so pods can communicate
-              kubectl apply -f http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml
-
-      ImageId:
-        Fn::FindInMap:
-        - RegionMap
-        - Ref: AWS::Region
-        - '64'
+              kubectl apply -f
+            - Fn::Join:
+              - "/"
+              - - Fn::FindInMap:
+                  - RegionMap
+                  - Ref: AWS::Region
+                  - QuickStartS3URL
+                - Ref: QSS3BucketName
+                - Ref: QSS3KeyPrefix
+                - scripts/calico.yaml
+            - "\n"
 
   RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
