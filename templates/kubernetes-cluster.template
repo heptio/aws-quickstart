@@ -1,5 +1,5 @@
 ---
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09' # Template version (this exact version is required by AWS)
 Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluster.
   The master node is an auto-recovering Amazon EC2 instance. Two more EC2
   instances in an AutoScalingGroup join the Kubernetes cluster as nodes. The
@@ -8,8 +8,8 @@ Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluste
   steps: http://jump.heptio.com/aws-qs-next **WARNING** This template creates
   three Amazon EC2 instances. You will be billed for the AWS resources used if
   you create a stack from this template. **CREDIT** This template is provided
-  courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon
-  Campbell.'
+  courtesy of Heptio (https://www.heptio.com/), by Joe Beda, Sharon
+  Campbell, and Ken Simon.'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -53,19 +53,26 @@ Metadata:
       QSS3KeyPrefix:
         default: S3 Key Prefix
 
+# Parameters allow the user to pass settings to the template before building the stack
 Parameters:
+  # Required. Calls for the name of an existing EC2 KeyPair, to enable SSH access to the instances
+  # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html
   KeyName:
     Description: Existing EC2 KeyPair for SSH access
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
 
+  # Required. This is a new token all nodes will use to join the cluster
+  # Kubernetes requires a token of the format xxxxxx.xxxxxxxxxxxxxxxx
   ClusterToken:
     Description: 'Generate this token (requires Python): python -c ''import random;
       print "%0x.%0x" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'''
     Type: String
     ConstraintDescription: must be a secure string, which will be used as the token
       for this cluster, of the format <6 character string>.<16 character string>.
-
+  
+  # Default is t2.medium. EC2 instance type for the cluster
+  # https://aws.amazon.com/ec2/instance-types/
   InstanceType:
     Description: EC2 instance type for the cluster
     Type: String
@@ -126,11 +133,16 @@ Parameters:
     - cc2.8xlarge
     - cg1.4xlarge
     ConstraintDescription: must be a valid EC2 instance type.
+  # Required. This is an availability zone from your region
+  # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   AvailabilityZone:
     Description: The Availability Zone for this cluster.  Generally, Heptio recommends
       that you run a cluster per AZ and use tooling to coordinate across AZs.
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
+  # Default 0.0.0.0/0 (all locations)
+  # Specifies the IP range from which you will have SSH access over port 22
+  # Used in the allow22 SecurityGroup
   SSHLocation:
     Description: IP address range that can be used to SSH to the EC2 instances
     Type: String
@@ -139,6 +151,8 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  # Default 2. Choose 1-3 initial nodes to run cluster workloads (in addition to the master node instance)
+  # You can scale up your cluster later and add more nodes
   K8sNodeCapacity:
     Default: '2'
     Description: Initial number of nodes
@@ -171,7 +185,9 @@ Parameters:
       forward slash (/). It cannot start or end with forward slash (/) because they
       are automatically appended.
     Type: String
+# http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 Mappings:
+  # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     ap-northeast-1:
       '64': ami-18afc47f
@@ -230,32 +246,51 @@ Mappings:
       Partition: aws
       QuickStartS3URL: https://s3.amazonaws.com
 
+# Resources are the AWS services we want to actually create as part of the Stack
 Resources:
+  # This is an EC2 instance that will serve as our master node
   K8sMasterInstance:
     Type: AWS::EC2::Instance
     Properties:
+      # Where the EC2 instance gets deployed geographically
       AvailabilityZone:
         Ref: AvailabilityZone
+      # Refers to the MasterInstanceProfile resource, which applies the IAM role for the master instance
+      # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
+      # This is needed for the Kubernetes-AWS cloud-provider integration
       IamInstanceProfile:
         Ref: MasterInstanceProfile
+      # Type of instance; the default is t2.medium
       InstanceType:
         Ref: InstanceType
+      # Adds our SSH key to the instance
       KeyName:
         Ref: KeyName
+      # Joins two security groups: the existing default group, and the new allow22 group
+      # The default group allows all instances in the same stack to communicate internally
+      # The allow22 group allows external communication on port 22 from a chosen CIDR range
       SecurityGroups:
       - default
       - Ref: allow22
+      # Designates a name for this EC2 instance that will appear in the instances list (k8s-master)
+      # Tags it with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
       - Key: Name
         Value: k8s-master
       - Key: KubernetesCluster
         Value:
           Ref: AWS::StackName
+      # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
         - RegionMap
         - Ref: AWS::Region
         - '64'
+      # This is where most of the Kubernetes stuff happens
+      # The userdata contains a bash script that bootstraps Kubernetes
+      # and useful related software like Docker for containers and Calico networking
+      # The script itself gets written to /var/lib/cloud/instance/scripts/part-001
+      # on the node, so you can view it there if you need to debug
       UserData:
         Fn::Base64:
           # Nested arrays here: Fn::Join takes a first argument of a join
@@ -267,6 +302,7 @@ Resources:
             - |-
               #!/bin/bash -v
               # Create directory and file to enable --cloud-provider=aws for kubelet
+              # This is a systemd file
               mkdir -p /etc/systemd/system/kubelet.service.d/
               cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
               [Service]
@@ -317,6 +353,10 @@ Resources:
                 - scripts/calico.yaml
             - "\n"
 
+  # This is a CloudWatch alarm https://aws.amazon.com/cloudwatch/
+  # If the master node is unresponsive for 5 minutes, AWS will attempt to recover it
+  # It will preserve the original IP, which is important for Kubernetes networking
+  # Based on http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-cloudwatch.html#cloudwatch-sample-recover-instance
   RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -325,16 +365,20 @@ Resources:
       Namespace: AWS/EC2
       MetricName: StatusCheckFailed_System
       Statistic: Minimum
+      # 60-second periods (1 minute)
       Period: '60'
+      # 5-minute check-ins
       EvaluationPeriods: '5'
       ComparisonOperator: GreaterThanThreshold
       Threshold: '0'
+      # This is the call that actually tries to recover the instance
       AlarmActions:
       - Fn::Join:
         - ''
         - - 'arn:aws:automate:'
           - Ref: AWS::Region
           - ":ec2:recover"
+      # Applies this alarm to our K8sMasterInstance
       Dimensions:
       - Name: InstanceId
         Value:
