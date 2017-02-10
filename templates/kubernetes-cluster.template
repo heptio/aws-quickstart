@@ -253,13 +253,15 @@ Conditions:
     - Ref: ClusterAssociation
     - ''
 
-
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
+
+  # Install a CloudWatch logging group for system logs for each instance
   KubernetesLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: Heptio-Kubernetes
+      LogGroupName:
+        Ref: AWS::StackName
       RetentionInDays: 14
 
   # This is an EC2 instance that will serve as our master node
@@ -330,14 +332,32 @@ Resources:
             apt-get update
 
             # Install Cloudwatch bootstap tools and dependencies
-            apt-get install -y unzip python-setuptools
+            apt-get install -y unzip python python-setuptools
             easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
 
             # Install Cloudwatch Logs
             mkdir -p /usr/local/aws
             wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
             chmod +x /usr/local/aws/awslogs-agent-setup.py
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
+
+            cat <<EOF > /tmp/kubernetes-awslogs.conf
+            [general]
+            state_file = /var/awslogs/state/agent-state
+
+            [/var/log/kube*]
+            file = /var/log/kube*
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+
+            [/var/log/cloud-init-output.log]
+            file = /var/log/cloud-init-output.log
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+            EOF
+
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
 
             cat <<EOF > /etc/systemd/system/awslogs.service
             [Service]
@@ -353,13 +373,14 @@ Resources:
             systemctl start awslogs.service
 
             # Create directory and file to enable --cloud-provider=aws for kubelet
+            # This is a systemd file
             mkdir -p /etc/systemd/system/kubelet.service.d/
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
             [Service]
             Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
             EOF
 
-            # Install docker if you don't have it already.
+            # Install Docker
             apt-get install -y docker.io
 
             # Install kubernetes tools
@@ -370,9 +391,6 @@ Resources:
 
             # Initialize master node
             kubeadm init --cloud-provider=aws --token=${ClusterToken}
-
-            # Embed the provided cluster token in the script, (no newline from
-            # above since we're using |-)
 
             # Add-on for network Calico
             # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
@@ -497,12 +515,33 @@ Resources:
             # Update package lists
             apt-get update
 
+            # Install Cloudwatch bootstap tools and dependencies
+            apt-get install -y unzip python python-setuptools
+            easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+
             # Install Cloudwatch Logs
-            apt-get -y install python
             mkdir -p /usr/local/aws
             wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
             chmod +x /usr/local/aws/awslogs-agent-setup.py
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
+
+            cat <<EOF > /tmp/kubernetes-awslogs.conf
+            [general]
+            state_file = /var/awslogs/state/agent-state
+
+            [/var/log/kube*]
+            file = /var/log/kube*
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+
+            [/var/log/cloud-init-output.log]
+            file = /var/log/cloud-init-output.log
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+            EOF
+
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
 
             cat <<EOF > /etc/systemd/system/awslogs.service
             [Service]
@@ -520,7 +559,6 @@ Resources:
             # Create directory and file to enable --cloud-provider=aws for kubelet
             # This is a systemd file
             mkdir -p /etc/systemd/system/kubelet.service.d/
-
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
             [Service]
             Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
