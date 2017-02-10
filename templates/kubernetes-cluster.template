@@ -281,6 +281,15 @@ Resources:
           Fn::Sub: |
             #!/bin/bash -v
 
+            # Set up apt before we install anything, so that we only have to `apt-get update` once
+            # Get repository key
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+            # Append key to sources file
+            cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+            deb http://apt.kubernetes.io/ kubernetes-xenial main
+            EOF
+
             # Update package lists
             apt-get update
 
@@ -312,14 +321,6 @@ Resources:
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
             [Service]
             Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
-            EOF
-
-            # Get repository key
-            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-
-            # Append key to sources file
-            cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
-            deb http://apt.kubernetes.io/ kubernetes-xenial main
             EOF
 
             # Install docker if you don't have it already.
@@ -443,6 +444,15 @@ Resources:
           Fn::Sub: |
             #!/bin/bash -v
 
+            # Set up apt before we install anything, so that we only have to `apt-get update` once
+            # Get repository key
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+            # Append key to sources file
+            cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+            deb http://apt.kubernetes.io/ kubernetes-xenial main
+            EOF
+
             # Update package lists
             apt-get update
 
@@ -473,14 +483,6 @@ Resources:
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
             [Service]
             Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
-            EOF
-
-            # Get repository key
-            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-
-            # Append key to sources file
-            cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
-            deb http://apt.kubernetes.io/ kubernetes-xenial main
             EOF
 
             # Install Docker
