@@ -292,8 +292,7 @@ Resources:
             mkdir -p /usr/local/aws
             wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
             chmod +x /usr/local/aws/awslogs-agent-setup.py
-            #TODO: move config file location to quickstart bucket
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://43d3.brandonchav.is/kubernetes-awslogs.conf
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
 
             cat <<EOF > /etc/systemd/system/awslogs.service
             [Service]
@@ -452,7 +451,6 @@ Resources:
             mkdir -p /usr/local/aws
             wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
             chmod +x /usr/local/aws/awslogs-agent-setup.py
-            #TODO: move config file location to quickstart bucket
             python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
 
             cat <<EOF > /etc/systemd/system/awslogs.service
