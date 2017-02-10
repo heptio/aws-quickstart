@@ -36,6 +36,7 @@ Metadata:
       Parameters:
       - QSS3BucketName
       - QSS3KeyPrefix
+      - ClusterAssociation
 
     ParameterLabels:
       KeyName:
@@ -58,6 +59,8 @@ Metadata:
         default: S3 Bucket
       QSS3KeyPrefix:
         default: S3 Key Prefix
+      ClusterAssociation:
+        default: Cluster Association
 
 # Parameters allow the user to pass settings to the template before building the stack
 Parameters:
@@ -84,6 +87,10 @@ Parameters:
   ClusterSubnetId:
     Description: 'The subnet to use for this cluster.  Must belong to the availability zone above'
     Type: AWS::EC2::Subnet::Id
+
+  ClusterAssociation:
+    Description: 'A string, unique within your AWS account, to associate resources in this kubernetes cluster.  Leave blank to use this Quickstart Stack Name'
+    Type: String
 
   # Default is t2.medium. EC2 instance type for the cluster
   # https://aws.amazon.com/ec2/instance-types/
@@ -239,6 +246,13 @@ Mappings:
     us-west-2:
       '64': ami-b2d463d2
 
+# Helper Conditions which help find the right values for resources
+Conditions:
+  AssociationProvidedCondition:
+    Fn::Equals:
+    - Ref: ClusterAssociation
+    - ''
+
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
   KubernetesLogGroup:
@@ -283,7 +297,10 @@ Resources:
         Value: k8s-master
       - Key: KubernetesCluster
         Value:
-          Ref: AWS::StackName
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: AWS::StackName
+          - Ref: ClusterAssociation
       # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
@@ -418,7 +435,10 @@ Resources:
         PropagateAtLaunch: 'true'
       - Key: KubernetesCluster
         Value:
-          Ref: AWS::StackName
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: AWS::StackName
+          - Ref: ClusterAssociation
         PropagateAtLaunch: 'true'
     # Tells the group how many instances to update at a time, if an update is applied
     UpdatePolicy:
@@ -537,7 +557,38 @@ Resources:
       Tags:
       - Key: KubernetesCluster
         Value:
-          Ref: AWS::StackName
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: AWS::StackName
+          - Ref: ClusterAssociation
+      - Key: Name
+        Value: k8s-cluster-security-group
+
+  # Permissions we add to the main security group:
+  # - Ensure cluster machines can talk to one another
+  ClusterSecGroupCrossTalk:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: ClusterSecGroup
+      SourceSecurityGroupId:
+        Ref: ClusterSecGroup
+      IpProtocol: '-1'
+      FromPort: '0'
+      ToPort: '65535'
+
+  # - Open up port 22 for SSH into each machine
+  # The allowed locations are chosen by the user in the SSHLocation parameter
+  ClusterSecGroupAllow22:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: ClusterSecGroup
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp:
+        Ref: SSHLocation
 
   # IAM role for nodes http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
   NodeRole:
