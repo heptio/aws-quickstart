@@ -70,7 +70,7 @@ Parameters:
     Type: String
     ConstraintDescription: must be a secure string, which will be used as the token
       for this cluster, of the format <6 character string>.<16 character string>.
-  
+
   # Default is t2.medium. EC2 instance type for the cluster
   # https://aws.amazon.com/ec2/instance-types/
   InstanceType:
@@ -133,7 +133,7 @@ Parameters:
     - cc2.8xlarge
     - cg1.4xlarge
     ConstraintDescription: must be a valid EC2 instance type.
-  
+
   # Required. This is an availability zone from your region
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   AvailabilityZone:
@@ -141,7 +141,7 @@ Parameters:
       that you run a cluster per AZ and use tooling to coordinate across AZs.
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
-  
+
   # Default 0.0.0.0/0 (all locations)
   # Specifies the IP range from which you will have SSH access over port 22
   # Used in the allow22 SecurityGroup
@@ -153,7 +153,7 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-  
+
   # Default 2. Choose 1-3 initial nodes to run cluster workloads (in addition to the master node instance)
   # You can scale up your cluster later and add more nodes
   K8sNodeCapacity:
@@ -163,7 +163,7 @@ Parameters:
     MinValue: '1'
     MaxValue: '3'
     ConstraintDescription: must be between 1 and 3 EC2 instances.
-  
+
   # S3 Bucket configuration: For hosting our own downstream copy of calico
   # configuration and potentially other things.
   QSS3BucketName:
@@ -178,7 +178,7 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
-  
+
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
@@ -193,7 +193,7 @@ Parameters:
 
 # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 Mappings:
-  
+
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     ap-northeast-1:
@@ -227,6 +227,12 @@ Mappings:
 
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
+  KubernetesLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: Heptio-Kubernetes
+      RetentionInDays: 14
+
   # This is an EC2 instance that will serve as our master node
   K8sMasterInstance:
     Type: AWS::EC2::Instance
@@ -272,66 +278,70 @@ Resources:
       # on the node, so you can view it there if you need to debug
       UserData:
         Fn::Base64:
-          # Nested arrays here: Fn::Join takes a first argument of a join
-          # string (in this case ''), and the second argument is the array
-          # itself.
-          Fn::Join:
-          - ''
-          -
-            - |-
-              #!/bin/bash -v
+          Fn::Sub: |
+            #!/bin/bash -v
 
-              # Create directory and file to enable --cloud-provider=aws for kubelet
-              # This is a systemd file
-              mkdir -p /etc/systemd/system/kubelet.service.d/
+            # Update package lists
+            apt-get update
 
-              cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
-              [Service]
-              Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
-              EOF
+            # Install Cloudwatch bootstap tools and dependencies
+            apt-get install -y unzip python-setuptools
+            easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
 
-              # Get repository key
-              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+            # Install Cloudwatch Logs
+            mkdir -p /usr/local/aws
+            wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+            chmod +x /usr/local/aws/awslogs-agent-setup.py
+            #TODO: move config file location to quickstart bucket
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://43d3.brandonchav.is/kubernetes-awslogs.conf
 
-              # Append key to sources file
-              cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
-              deb http://apt.kubernetes.io/ kubernetes-xenial main
-              EOF
+            cat <<EOF > /etc/systemd/system/awslogs.service
+            [Service]
+            Type=simple
+            Restart=always
+            KillMode=process
+            TimeoutSec=infinity
+            PIDFile=/var/awslogs/state/awslogs.pid
+            ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
+            EOF
 
-              # Update package lists
-              apt-get update
+            systemctl enable awslogs.service
+            systemctl start awslogs.service
 
-              # Install Docker
-              apt-get install -y docker.io
+            # Create directory and file to enable --cloud-provider=aws for kubelet
+            mkdir -p /etc/systemd/system/kubelet.service.d/
+            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+            [Service]
+            Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+            EOF
 
-              # Install Kubernetes tools
-              apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+            # Get repository key
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
-              # Reset kubeadm (workaround for kubelet package presence)
-              kubeadm reset
+            # Append key to sources file
+            cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+            deb http://apt.kubernetes.io/ kubernetes-xenial main
+            EOF
 
-              # Initialize master node
-              kubeadm init --cloud-provider=aws --token=
+            # Install docker if you don't have it already.
+            apt-get install -y docker.io
+
+            # Install kubernetes tools
+            apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+            # reset kubeadm (workaround for kubelet package presence)
+            kubeadm reset
+
+            # Initialize master node
+            kubeadm init --cloud-provider=aws --token=${ClusterToken}
 
             # Embed the provided cluster token in the script, (no newline from
             # above since we're using |-)
-            - { Ref: ClusterToken }
-            - "\n"
 
-            - |-
-              # Add-on for network Calico
-              # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
-              # so pods can communicate
-              kubectl apply -f
-            - ' '
-            - Fn::Join:
-              - ''
-              - - 'https://'
-                - Ref: QSS3BucketName
-                - '.s3.amazonaws.com/'
-                - Ref: QSS3KeyPrefix
-                - /scripts/calico.yaml
-            - "\n"
+            # Add-on for network Calico
+            # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
+            # so pods can communicate
+            kubectl apply -f https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/calico.yaml
 
   # This is a CloudWatch alarm https://aws.amazon.com/cloudwatch/
   # If the master node is unresponsive for 5 minutes, AWS will attempt to recover it
@@ -396,7 +406,7 @@ Resources:
       AutoScalingRollingUpdate:
         MinInstancesInService: '1'
         MaxBatchSize: '1'
-  
+
   # This tells AWS what kinds of servers we want in our Auto Scaling Group
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -431,54 +441,68 @@ Resources:
       # on each node, so you can view it there if you need to debug
       UserData:
         Fn::Base64:
-          Fn::Join:
-          - ''
-          -
-            - |-
-              #!/bin/bash -v
+          Fn::Sub: |
+            #!/bin/bash -v
 
-              # Create directory and file to enable --cloud-provider=aws for kubelet
-              # This is a systemd file
-              mkdir -p /etc/systemd/system/kubelet.service.d/
+            # Update package lists
+            apt-get update
 
-              cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
-              [Service]
-              Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws
-              EOF
+            # Install Cloudwatch Logs
+            apt-get -y install python
+            mkdir -p /usr/local/aws
+            wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+            chmod +x /usr/local/aws/awslogs-agent-setup.py
+            #TODO: move config file location to quickstart bucket
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
 
-              # Get repository key
-              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+            cat <<EOF > /etc/systemd/system/awslogs.service
+            [Service]
+            Type=simple
+            Restart=always
+            KillMode=process
+            TimeoutSec=infinity
+            PIDFile=/var/awslogs/state/awslogs.pid
+            ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
+            EOF
 
-              # Append key to sources file
-              cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
-              deb http://apt.kubernetes.io/ kubernetes-xenial main
-              EOF
+            systemctl enable awslogs.service
+            systemctl start awslogs.service
 
-              # Update package lists
-              apt-get update
+            # Create directory and file to enable --cloud-provider=aws for kubelet
+            # This is a systemd file
+            mkdir -p /etc/systemd/system/kubelet.service.d/
 
-              # Install Docker
-              apt-get install -y docker.io
+            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+            [Service]
+            Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+            EOF
 
-              # Install Kubernetes tools
-              apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+            # Get repository key
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
-              # Reset kubeadm (workaround for kubelet package presence)
-              kubeadm reset
+            # Append key to sources file
+            cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+            deb http://apt.kubernetes.io/ kubernetes-xenial main
+            EOF
 
-              # Join master node
-              kubeadm join --token=
+            # Install Docker
+            apt-get install -y docker.io
 
-            - { Ref: ClusterToken }
-            - " "
-            - Fn::GetAtt:
-              - K8sMasterInstance
-              - PrivateIp
-            - "\n"
+            # Install Kubernetes tools
+            apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+            # reset kubeadm (workaround for kubelet package presence)
+            kubeadm reset
+
+            # Join master node
+            kubeadm join --token=${ClusterToken} ${K8sMasterInstance.PrivateIp}
 
   # Open up port 22 for SSH into each machine
   # The allowed locations are chosen by the user in the SSHLocation parameter
   allow22:
+    Metadata:
+      Comment: Open up port 22 for SSH into each machine
+      Note: Metadata is a way to add comments that will survive linting
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH access via port 22
@@ -528,7 +552,19 @@ Resources:
             - ecr:ListImages
             - ecr:BatchGetImage
             Resource: "*"
-  
+
+      - PolicyName: cwlogs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            Resource: !Sub ["${LogGroupArn}:*", LogGroupArn: !GetAtt KubernetesLogGroup.Arn]
+
   # Resource that creates the node IAM role
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -573,7 +609,19 @@ Resources:
             - autoscaling:DescribeAutoScalingGroups
             - autoscaling:UpdateAutoScalingGroup
             Resource: "*"
-  
+
+      - PolicyName: cwlogs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            Resource: !Sub ["${LogGroupArn}:*", LogGroupArn: !GetAtt KubernetesLogGroup.Arn]
+
   # Resource that creates the master node IAM role
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
