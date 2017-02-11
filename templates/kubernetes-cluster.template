@@ -89,7 +89,7 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
 
   ClusterAssociation:
-    Description: 'A string, unique within your AWS account, to associate resources in this kubernetes cluster.  Leave blank to use this Quickstart Stack Name'
+    Description: 'A string, unique within your AWS account, to associate resources in this kubernetes cluster.  Leave blank to use this Quick Start Stack Name'
     Type: String
 
   # Default is t2.medium. EC2 instance type for the cluster
@@ -99,19 +99,11 @@ Parameters:
     Type: String
     Default: t2.medium
     AllowedValues:
-    - t1.micro
     - t2.nano
     - t2.micro
     - t2.small
     - t2.medium
     - t2.large
-    - m1.small
-    - m1.medium
-    - m1.large
-    - m1.xlarge
-    - m2.xlarge
-    - m2.2xlarge
-    - m2.4xlarge
     - m3.medium
     - m3.large
     - m3.xlarge
@@ -121,8 +113,6 @@ Parameters:
     - m4.2xlarge
     - m4.4xlarge
     - m4.10xlarge
-    - c1.medium
-    - c1.xlarge
     - c3.large
     - c3.xlarge
     - c3.2xlarge
@@ -148,11 +138,6 @@ Parameters:
     - d2.2xlarge
     - d2.4xlarge
     - d2.8xlarge
-    - hi1.4xlarge
-    - hs1.8xlarge
-    - cr1.8xlarge
-    - cc2.8xlarge
-    - cg1.4xlarge
     ConstraintDescription: must be a valid EC2 instance type.
 
   # Required. This is an availability zone from your region
@@ -182,7 +167,7 @@ Parameters:
     Description: Initial number of nodes
     Type: Number
     MinValue: '1'
-    MaxValue: '3'
+    MaxValue: '20'
     ConstraintDescription: must be between 1 and 3 EC2 instances.
 
   # S3 Bucket configuration: For hosting our own downstream copy of calico
@@ -488,9 +473,8 @@ Resources:
       # Adds our SSH key to the instance
       KeyName:
         Ref: KeyName
-      # TODO(udpate doc) Joins two security groups: the existing default group, and the new allow22 group
-      # The default group allows all instances in the same stack to communicate internally
-      # The allow22 group allows external communication on port 22 from a chosen CIDR range
+      # Join the cluster security group so that we can customize the access
+      # control (See the ClusterSecGroup resource for details)
       SecurityGroups:
       - Ref: ClusterSecGroup
       # This is where most of the Kubernetes stuff happens
@@ -582,7 +566,7 @@ Resources:
   ClusterSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable machines to talk to one another
+      GroupDescription: Security group for all machines in the cluster
       VpcId:
         Ref: VPCID
       # Security Groups must be tagged with KubernetesCluster=<cluster> so that
@@ -744,11 +728,6 @@ Outputs:
     Description: InstanceId of the master EC2 instance
     Value:
       Ref: K8sMasterInstance
-
-  ClusterSecGroupId:
-    Description: Security Group for machines in the cluster
-    Value:
-      Ref: ClusterSecGroup
 
   MasterAZ:
     Description: Availability Zone of the master
