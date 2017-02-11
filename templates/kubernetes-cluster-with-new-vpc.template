@@ -451,28 +451,16 @@ Resources:
         Ref: KeyName
       UserData:
         Fn::Base64:
-          Fn::Join:
-          - ''
-          - - "#!/bin/bash\n"
-            - 'BASTION_BOOTSTRAP_FILE=bastion_bootstrap.sh'
-            - "\n"
-            - 'BASTION_BOOTSTRAP=https://s3.amazonaws.com/quickstart-reference/linux/bastion/latest/scripts/bastion_bootstrap.sh'
-            - "\n"
-            - 'curl -s ${BASTION_BOOTSTRAP} > ${BASTION_BOOTSTRAP_FILE} '
-            - "\n"
-            - 'chmod +x ${BASTION_BOOTSTRAP_FILE}'
-            - "\n"
-            - "./${BASTION_BOOTSTRAP_FILE} "
-            - " --banner "
-            - Fn::Join:
-              - ''
-              - - 'https://'
-                - Ref: QSS3BucketName
-                - '.s3.amazonaws.com/'
-                - Ref: QSS3KeyPrefix
-                - /scripts/banner_message.txt
-            - " --enable true"
-            - "\n"
+          Fn::Sub: |
+            #!/bin/bash
+
+            BASTION_BOOTSTRAP_FILE=bastion_bootstrap.sh
+            BASTION_BOOTSTRAP=https://s3.amazonaws.com/quickstart-reference/linux/bastion/latest/scripts/bastion_bootstrap.sh
+
+            curl -s -o $BASTION_BOOTSTRAP_FILE $BASTION_BOOTSTRAP
+            chmod +x $BASTION_BOOTSTRAP_FILE
+
+            ./$BASTION_BOOTSTRAP_FILE --banner https://${QSS3BucketName}/${QSS3KeyPrefix}/scripts/banner_message.txt --enable true
 
   # Open up port 22 for SSH for the bastion host
   BastionSecurityGroup:
