@@ -31,6 +31,7 @@ Metadata:
       Parameters:
       - ClusterToken
       - K8sNodeCapacity
+      - NetworkingProvider
     - Label:
         default: Advanced
       Parameters:
@@ -56,6 +57,8 @@ Metadata:
         default: S3 Bucket
       QSS3KeyPrefix:
         default: S3 Key Prefix
+      NetworkingProvider:
+        default: Networking Provider
 
 Parameters:
   KeyName:
@@ -208,6 +211,17 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/). It cannot start or end with forward slash (/) because they
       are automatically appended.
+    Type: String
+
+  NetworkingProvider:
+    AllowedValues:
+    - calico
+    - weave
+    ConstraintDescription: 'Currently supported values are "calico" and "weave"'
+    Default: calico
+    Description: Which networking provider to use for communication between
+      pods in the kubernetes cluster.  Supported configurations are calico and
+      weave.
     Type: String
 
 Mappings:
@@ -514,6 +528,8 @@ Resources:
           Ref: QSS3KeyPrefix
         ClusterAssociation:
           Ref: AWS::StackName
+        NetworkingProvider:
+          Ref: NetworkingProvider
 
 Outputs:
   # Outputs from VPC creation
