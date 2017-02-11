@@ -540,6 +540,20 @@ Outputs:
       - BastionHost
       - PublicDnsName
 
+  SSHProxyCommand:
+    Description: SSH Command to run to proxy to the master instance through the bastion host to access port 8080
+    Value:
+      Fn::Sub:
+        - 'ssh -A -L8080:localhost:8080 -o ProxyCommand=''ssh ubuntu@${BastionPublicIp} nc ${MasterPrivateIp} 22'' ubuntu@${MasterPrivateIp}'
+        - BastionPublicIp:
+            Fn::GetAtt:
+            - BastionHost
+            - PublicIp
+          MasterPrivateIp:
+            Fn::GetAtt:
+              - K8sStack
+              - Outputs.MasterPrivateIP
+
   # Outputs forwarded from the k8s template
   MasterInstanceId:
     Description: InstanceId of the master EC2 instance
