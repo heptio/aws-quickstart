@@ -17,8 +17,10 @@ Metadata:
     - Label:
         default: Amazon EC2 Configuration
       Parameters:
+      - VPCID
       - AvailabilityZone
       - InstanceType
+      - ClusterSubnetId
     - Label:
         default: Access Configuration
       Parameters:
@@ -34,12 +36,17 @@ Metadata:
       Parameters:
       - QSS3BucketName
       - QSS3KeyPrefix
+      - ClusterAssociation
 
     ParameterLabels:
       KeyName:
         default: SSH Key
+      VPCID:
+        default: VPC
       AvailabilityZone:
         default: Availability Zone
+      ClusterSubnetId:
+        default: Subnet
       SSHLocation:
         default: SSH Ingress Location
       ClusterToken:
@@ -52,6 +59,8 @@ Metadata:
         default: S3 Bucket
       QSS3KeyPrefix:
         default: S3 Key Prefix
+      ClusterAssociation:
+        default: Cluster Association
 
 # Parameters allow the user to pass settings to the template before building the stack
 Parameters:
@@ -62,6 +71,10 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
 
+  VPCID:
+    Description: 'Your VPC to use for this cluster'
+    Type: AWS::EC2::VPC::Id
+
   # Required. This is a new token all nodes will use to join the cluster
   # Kubernetes requires a token of the format xxxxxx.xxxxxxxxxxxxxxxx
   ClusterToken:
@@ -71,6 +84,14 @@ Parameters:
     ConstraintDescription: must be a secure string, which will be used as the token
       for this cluster, of the format <6 character string>.<16 character string>.
 
+  ClusterSubnetId:
+    Description: 'The subnet to use for this cluster.  Must belong to the availability zone above'
+    Type: AWS::EC2::Subnet::Id
+
+  ClusterAssociation:
+    Description: 'A string, unique within your AWS account, to associate resources in this kubernetes cluster.  Leave blank to use this Quick Start Stack Name'
+    Type: String
+
   # Default is t2.medium. EC2 instance type for the cluster
   # https://aws.amazon.com/ec2/instance-types/
   InstanceType:
@@ -78,19 +99,11 @@ Parameters:
     Type: String
     Default: t2.medium
     AllowedValues:
-    - t1.micro
     - t2.nano
     - t2.micro
     - t2.small
     - t2.medium
     - t2.large
-    - m1.small
-    - m1.medium
-    - m1.large
-    - m1.xlarge
-    - m2.xlarge
-    - m2.2xlarge
-    - m2.4xlarge
     - m3.medium
     - m3.large
     - m3.xlarge
@@ -100,8 +113,6 @@ Parameters:
     - m4.2xlarge
     - m4.4xlarge
     - m4.10xlarge
-    - c1.medium
-    - c1.xlarge
     - c3.large
     - c3.xlarge
     - c3.2xlarge
@@ -127,11 +138,6 @@ Parameters:
     - d2.2xlarge
     - d2.4xlarge
     - d2.8xlarge
-    - hi1.4xlarge
-    - hs1.8xlarge
-    - cr1.8xlarge
-    - cc2.8xlarge
-    - cg1.4xlarge
     ConstraintDescription: must be a valid EC2 instance type.
 
   # Required. This is an availability zone from your region
@@ -161,7 +167,7 @@ Parameters:
     Description: Initial number of nodes
     Type: Number
     MinValue: '1'
-    MaxValue: '3'
+    MaxValue: '20'
     ConstraintDescription: must be between 1 and 3 EC2 instances.
 
   # S3 Bucket configuration: For hosting our own downstream copy of calico
@@ -225,12 +231,23 @@ Mappings:
     us-west-2:
       '64': ami-b2d463d2
 
+# Helper Conditions which help find the right values for resources
+Conditions:
+  AssociationProvidedCondition:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: ClusterAssociation
+      - ''
+
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
+
+  # Install a CloudWatch logging group for system logs for each instance
   KubernetesLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: Heptio-Kubernetes
+      LogGroupName:
+        Ref: AWS::StackName
       RetentionInDays: 14
 
   # This is an EC2 instance that will serve as our master node
@@ -251,12 +268,16 @@ Resources:
       # Adds our SSH key to the instance
       KeyName:
         Ref: KeyName
-      # Joins two security groups: the existing default group, and the new allow22 group
-      # The default group allows all instances in the same stack to communicate internally
-      # The allow22 group allows external communication on port 22 from a chosen CIDR range
-      SecurityGroups:
-      - default
-      - Ref: allow22
+      NetworkInterfaces:
+      - DeleteOnTermination: true
+        DeviceIndex: 0
+        SubnetId:
+          Ref: ClusterSubnetId
+        # Joins two security groups: A default group for cluster communication, and the new allow22 group
+        # The default group allows all instances in the same stack to communicate internally
+        # The allow22 group allows external communication on port 22 from a chosen CIDR range
+        GroupSet:
+        - Ref: ClusterSecGroup
       # Designates a name for this EC2 instance that will appear in the instances list (k8s-master)
       # Tags it with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
@@ -264,7 +285,10 @@ Resources:
         Value: k8s-master
       - Key: KubernetesCluster
         Value:
-          Ref: AWS::StackName
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: ClusterAssociation
+          - Ref: AWS::StackName
       # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
@@ -294,14 +318,32 @@ Resources:
             apt-get update
 
             # Install Cloudwatch bootstap tools and dependencies
-            apt-get install -y unzip python-setuptools
+            apt-get install -y unzip python python-setuptools
             easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
 
             # Install Cloudwatch Logs
             mkdir -p /usr/local/aws
             wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
             chmod +x /usr/local/aws/awslogs-agent-setup.py
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
+
+            cat <<EOF > /tmp/kubernetes-awslogs.conf
+            [general]
+            state_file = /var/awslogs/state/agent-state
+
+            [/var/log/kube*]
+            file = /var/log/kube*
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+
+            [/var/log/cloud-init-output.log]
+            file = /var/log/cloud-init-output.log
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+            EOF
+
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
 
             cat <<EOF > /etc/systemd/system/awslogs.service
             [Service]
@@ -317,13 +359,14 @@ Resources:
             systemctl start awslogs.service
 
             # Create directory and file to enable --cloud-provider=aws for kubelet
+            # This is a systemd file
             mkdir -p /etc/systemd/system/kubelet.service.d/
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
             [Service]
             Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
             EOF
 
-            # Install docker if you don't have it already.
+            # Install Docker
             apt-get install -y docker.io
 
             # Install kubernetes tools
@@ -334,9 +377,6 @@ Resources:
 
             # Initialize master node
             kubeadm init --cloud-provider=aws --token=${ClusterToken}
-
-            # Embed the provided cluster token in the script, (no newline from
-            # above since we're using |-)
 
             # Add-on for network Calico
             # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
@@ -391,6 +431,9 @@ Resources:
       # More cluster sizing
       MinSize: '1'
       MaxSize: '3'
+      # VPC Zone Identifier is the subnets to put the hosts in
+      VPCZoneIdentifier:
+        - Ref: ClusterSubnetId
       # Designates names for these EC2 instances that will appear in the instances list (k8s-node)
       # Tags each node with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
@@ -399,7 +442,10 @@ Resources:
         PropagateAtLaunch: 'true'
       - Key: KubernetesCluster
         Value:
-          Ref: AWS::StackName
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: ClusterAssociation
+          - Ref: AWS::StackName
         PropagateAtLaunch: 'true'
     # Tells the group how many instances to update at a time, if an update is applied
     UpdatePolicy:
@@ -428,12 +474,10 @@ Resources:
       # Adds our SSH key to the instance
       KeyName:
         Ref: KeyName
-      # Joins two security groups: the existing default group, and the new allow22 group
-      # The default group allows all instances in the same stack to communicate internally
-      # The allow22 group allows external communication on port 22 from a chosen CIDR range
+      # Join the cluster security group so that we can customize the access
+      # control (See the ClusterSecGroup resource for details)
       SecurityGroups:
-      - default
-      - Ref: allow22
+      - Ref: ClusterSecGroup
       # This is where most of the Kubernetes stuff happens
       # The userdata contains a bash script that bootstraps Kubernetes
       # and useful related software like Docker for containers and Calico networking
@@ -456,12 +500,33 @@ Resources:
             # Update package lists
             apt-get update
 
+            # Install Cloudwatch bootstap tools and dependencies
+            apt-get install -y unzip python python-setuptools
+            easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+
             # Install Cloudwatch Logs
-            apt-get -y install python
             mkdir -p /usr/local/aws
             wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
             chmod +x /usr/local/aws/awslogs-agent-setup.py
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c http://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf
+
+            cat <<EOF > /tmp/kubernetes-awslogs.conf
+            [general]
+            state_file = /var/awslogs/state/agent-state
+
+            [/var/log/kube*]
+            file = /var/log/kube*
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+
+            [/var/log/cloud-init-output.log]
+            file = /var/log/cloud-init-output.log
+            log_group_name = ${AWS::StackName}
+            log_stream_name = {instance_id}
+            datetime_format = %b %d %H:%M:%S
+            EOF
+
+            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
 
             cat <<EOF > /etc/systemd/system/awslogs.service
             [Service]
@@ -479,7 +544,6 @@ Resources:
             # Create directory and file to enable --cloud-provider=aws for kubelet
             # This is a systemd file
             mkdir -p /etc/systemd/system/kubelet.service.d/
-
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
             [Service]
             Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
@@ -497,28 +561,54 @@ Resources:
             # Join master node
             kubeadm join --token=${ClusterToken} ${K8sMasterInstance.PrivateIp}
 
-  # Open up port 22 for SSH into each machine
-  # The allowed locations are chosen by the user in the SSHLocation parameter
-  allow22:
-    Metadata:
-      Comment: Open up port 22 for SSH into each machine
-      Note: Metadata is a way to add comments that will survive linting
+  # Define the (one) security group for all machines in the cluster.  Keeping
+  # just one security group helps with k8s's cloud-provider=aws integration so
+  # that it knows what security group to manage.
+  ClusterSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH access via port 22
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '22'
-        ToPort: '22'
-        CidrIp:
-          Ref: SSHLocation
-
+      GroupDescription: Security group for all machines in the cluster
+      VpcId:
+        Ref: VPCID
       # Security Groups must be tagged with KubernetesCluster=<cluster> so that
       # they can coexist in the same VPC
       Tags:
       - Key: KubernetesCluster
         Value:
-          Ref: AWS::StackName
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: ClusterAssociation
+          - Ref: AWS::StackName
+      - Key: Name
+        Value: k8s-cluster-security-group
+
+  # Permissions we add to the main security group:
+  # - Ensure cluster machines can talk to one another
+  ClusterSecGroupCrossTalk:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: ClusterSecGroup
+      SourceSecurityGroupId:
+        Ref: ClusterSecGroup
+      IpProtocol: '-1'
+      FromPort: '0'
+      ToPort: '65535'
+
+  # - Open up port 22 for SSH into each machine
+  # The allowed locations are chosen by the user in the SSHLocation parameter
+  ClusterSecGroupAllow22:
+    Metadata:
+      Comment: Open up port 22 for SSH into each machine
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: ClusterSecGroup
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp:
+        Ref: SSHLocation
 
   # IAM role for nodes http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
   NodeRole:
@@ -646,20 +736,6 @@ Outputs:
       Fn::GetAtt:
       - K8sMasterInstance
       - AvailabilityZone
-
-  MasterPublicDNS:
-    Description: Public DNSName of the master
-    Value:
-      Fn::GetAtt:
-      - K8sMasterInstance
-      - PublicDnsName
-
-  MasterPublicIP:
-    Description: Public IP address of the master
-    Value:
-      Fn::GetAtt:
-      - K8sMasterInstance
-      - PublicIp
 
   MasterPrivateIP:
     Description: Private IP address of the master
