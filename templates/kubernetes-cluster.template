@@ -234,9 +234,10 @@ Mappings:
 # Helper Conditions which help find the right values for resources
 Conditions:
   AssociationProvidedCondition:
-    Fn::Equals:
-    - Ref: ClusterAssociation
-    - ''
+    Fn::Not:
+      Fn::Equals:
+      - Ref: ClusterAssociation
+      - ''
 
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
@@ -286,8 +287,8 @@ Resources:
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: AWS::StackName
           - Ref: ClusterAssociation
+          - Ref: AWS::StackName
       # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
@@ -443,8 +444,8 @@ Resources:
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: AWS::StackName
           - Ref: ClusterAssociation
+          - Ref: AWS::StackName
         PropagateAtLaunch: 'true'
     # Tells the group how many instances to update at a time, if an update is applied
     UpdatePolicy:
@@ -576,8 +577,8 @@ Resources:
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: AWS::StackName
           - Ref: ClusterAssociation
+          - Ref: AWS::StackName
       - Key: Name
         Value: k8s-cluster-security-group
 
