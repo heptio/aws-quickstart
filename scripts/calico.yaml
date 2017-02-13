@@ -1,4 +1,4 @@
-### Downloaded and re-hosted from
+### Downloaded and re-hosted with permission from
 ### http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml
 
 # This ConfigMap is used to configure a self-hosted Calico installation.
