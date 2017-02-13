@@ -31,6 +31,7 @@ Metadata:
       Parameters:
       - ClusterToken
       - K8sNodeCapacity
+      - NetworkingProvider
     - Label:
         default: Advanced
       Parameters:
@@ -56,6 +57,8 @@ Metadata:
         default: S3 Bucket
       QSS3KeyPrefix:
         default: S3 Key Prefix
+      NetworkingProvider:
+        default: Networking Provider
 
 Parameters:
   KeyName:
@@ -208,6 +211,17 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/). It cannot start or end with forward slash (/) because they
       are automatically appended.
+    Type: String
+
+  NetworkingProvider:
+    AllowedValues:
+    - calico
+    - weave
+    ConstraintDescription: 'Currently supported values are "calico" and "weave"'
+    Default: calico
+    Description: Which networking provider to use for communication between
+      pods in the kubernetes cluster.  Supported configurations are calico and
+      weave.
     Type: String
 
 Mappings:
@@ -437,28 +451,16 @@ Resources:
         Ref: KeyName
       UserData:
         Fn::Base64:
-          Fn::Join:
-          - ''
-          - - "#!/bin/bash\n"
-            - 'BASTION_BOOTSTRAP_FILE=bastion_bootstrap.sh'
-            - "\n"
-            - 'BASTION_BOOTSTRAP=https://s3.amazonaws.com/quickstart-reference/linux/bastion/latest/scripts/bastion_bootstrap.sh'
-            - "\n"
-            - 'curl -s ${BASTION_BOOTSTRAP} > ${BASTION_BOOTSTRAP_FILE} '
-            - "\n"
-            - 'chmod +x ${BASTION_BOOTSTRAP_FILE}'
-            - "\n"
-            - "./${BASTION_BOOTSTRAP_FILE} "
-            - " --banner "
-            - Fn::Join:
-              - ''
-              - - 'https://'
-                - Ref: QSS3BucketName
-                - '.s3.amazonaws.com/'
-                - Ref: QSS3KeyPrefix
-                - /scripts/banner_message.txt
-            - " --enable true"
-            - "\n"
+          Fn::Sub: |
+            #!/bin/bash
+
+            BASTION_BOOTSTRAP_FILE=bastion_bootstrap.sh
+            BASTION_BOOTSTRAP=https://s3.amazonaws.com/quickstart-reference/linux/bastion/latest/scripts/bastion_bootstrap.sh
+
+            curl -s -o $BASTION_BOOTSTRAP_FILE $BASTION_BOOTSTRAP
+            chmod +x $BASTION_BOOTSTRAP_FILE
+
+            ./$BASTION_BOOTSTRAP_FILE --banner https://${QSS3BucketName}/${QSS3KeyPrefix}/scripts/banner_message.txt --enable true
 
   # Open up port 22 for SSH for the bastion host
   BastionSecurityGroup:
@@ -514,6 +516,8 @@ Resources:
           Ref: QSS3KeyPrefix
         ClusterAssociation:
           Ref: AWS::StackName
+        NetworkingProvider:
+          Ref: NetworkingProvider
 
 Outputs:
   # Outputs from VPC creation
@@ -535,6 +539,20 @@ Outputs:
       Fn::GetAtt:
       - BastionHost
       - PublicDnsName
+
+  SSHProxyCommand:
+    Description: SSH Command to run to proxy to the master instance through the bastion host to access port 8080
+    Value:
+      Fn::Sub:
+        - 'ssh -A -L8080:localhost:8080 -o ProxyCommand=''ssh ubuntu@${BastionPublicIp} nc ${MasterPrivateIp} 22'' ubuntu@${MasterPrivateIp}'
+        - BastionPublicIp:
+            Fn::GetAtt:
+            - BastionHost
+            - PublicIp
+          MasterPrivateIp:
+            Fn::GetAtt:
+              - K8sStack
+              - Outputs.MasterPrivateIP
 
   # Outputs forwarded from the k8s template
   MasterInstanceId:
