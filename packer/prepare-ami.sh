@@ -1,4 +1,18 @@
 #!/bin/bash -eux
+# Copyright 2017 by the contributors
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
 
 kubernetes_release_tag="v1.5.2"
 kubernetes_release_version=${kubernetes_release_tag/v/}
@@ -26,7 +40,7 @@ apt-get install -qy jq python-pip python-setuptools
 pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz"
 pip install awscli
 
-## Pre-fetch Kubernetes release image, so that `kubeadm init` is a bit quicker
+## Pre-fetch various images, so that `kubeadm init` is a bit quicker
 images=(
   "gcr.io/google_containers/kube-proxy-amd64:${kubernetes_release_tag}"
   "gcr.io/google_containers/kube-apiserver-amd64:${kubernetes_release_tag}"
@@ -35,6 +49,13 @@ images=(
   "gcr.io/google_containers/etcd-amd64:3.0.14-kubeadm"
   "gcr.io/google_containers/kube-discovery-amd64:1.0"
   "gcr.io/google_containers/pause-amd64:3.0"
+  "gcr.io/google_containers/etcd:2.2.1"
+  "quay.io/calico/node:v1.0.2"
+  "calico/cni:v1.5.6"
+  "calico/kube-policy-controller:v0.5.2"
+  "calico/ctl:v1.0.2"
+  "weaveworks/weave-kube:1.9.0"
+  "weaveworks/weave-npc:1.9.0"
 )
 
 for i in "${images[@]}" ; do docker pull "${i}" ; done
