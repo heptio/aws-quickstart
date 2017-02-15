@@ -370,14 +370,6 @@ Resources:
             systemctl enable awslogs.service
             systemctl start awslogs.service
 
-            # Create directory and file to enable --cloud-provider=aws for kubelet
-            # This is a systemd file
-            mkdir -p /etc/systemd/system/kubelet.service.d/
-            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
-            [Service]
-            Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
-            EOF
-
             # reset kubeadm (workaround for kubelet package presence)
             kubeadm reset
 
