@@ -52,6 +52,7 @@ Metadata:
       - QSS3BucketName
       - QSS3KeyPrefix
       - ClusterAssociation
+      - LoadBalancerSubnetId
 
     ParameterLabels:
       KeyName:
@@ -78,6 +79,9 @@ Metadata:
         default: Cluster Association
       NetworkingProvider:
         default: Networking Provider
+      LoadBalancerSubnetId:
+        default: Load Balancer Subnet
+
 
 # Parameters allow the user to pass settings to the template before building the stack
 Parameters:
@@ -103,6 +107,10 @@ Parameters:
 
   ClusterSubnetId:
     Description: 'The subnet to use for this cluster.  Must belong to the availability zone above'
+    Type: AWS::EC2::Subnet::Id
+
+  LoadBalancerSubnetId:
+    Description: 'The subnet to use for load balancing to kubernetes API server.  Must be a public subnet.  Leave blank to use the cluster subnet.'
     Type: AWS::EC2::Subnet::Id
 
   ClusterAssociation:
@@ -207,7 +215,7 @@ Parameters:
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
       with forward slash (/) because they are automatically appended.
-    Default: heptio/kubernetes/packerdemo
+    Default: heptio/kubernetes/latest
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/). It cannot start or end with forward slash (/) because they
@@ -266,6 +274,11 @@ Conditions:
     - Fn::Equals:
       - Ref: ClusterAssociation
       - ''
+  LoadBalancerSubnetProvidedCondition:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: LoadBalancerSubnetId
+      - ''
 
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
@@ -281,6 +294,7 @@ Resources:
   # This is an EC2 instance that will serve as our master node
   K8sMasterInstance:
     Type: AWS::EC2::Instance
+    DependsOn: ApiLoadBalancer
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZone:
@@ -330,8 +344,11 @@ Resources:
       # on the node, so you can view it there if you need to debug
       UserData:
         Fn::Base64:
-          Fn::Sub: |
+          Fn::Sub:
+          - |
             #!/bin/bash -v
+
+            set -e
 
             # Install Cloudwatch Logs
             mkdir -p /usr/local/aws
@@ -374,12 +391,36 @@ Resources:
             kubeadm reset
 
             # Initialize master node
-            kubeadm init --cloud-provider=aws --token=${ClusterToken}
+            kubeadm init \
+              --cloud-provider=aws \
+              --token=${ClusterToken} \
+              --api-external-dns-names=${LoadBalancerHostname} \
+              --use-kubernetes-version=v1.5.2
 
             # Add-on for network Calico
             # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
             # so pods can communicate
             kubectl apply -f https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml
+
+            # Add this machine (master) to the load balancer for external access
+            sudo aws elb register-instances-with-load-balancer \
+              --load-balancer-name ${LoadBalancerName} \
+              --instances $(ec2metadata --instance-id) \
+              --region ${AWS::Region}
+
+            # Grab the client config for the admin user and leave it in the user's home dir, but reconfigure it with
+            # some sed magic.  What we're doing here:
+            # - Replacing the server with the publicly-visible load balancer address
+            # - Disabling TLS verification (since the hostname is random and not one of the SANs in the server cert)
+            # - Omitting the CA data, since it's not allowed when you're disabling TLS verification
+            KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
+            cat /etc/kubernetes/admin.conf | \
+              sed "s#server: https://.*:6443#server: https://${LoadBalancerHostname}#" \
+              >$KUBECONFIG_OUTPUT
+            chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
+            chmod 0600 $KUBECONFIG_OUTPUT
+          - LoadBalancerHostname: !GetAtt ApiLoadBalancer.DNSName
+            LoadBalancerName: !Ref ApiLoadBalancer
 
   # This is a CloudWatch alarm https://aws.amazon.com/cloudwatch/
   # If the master node is unresponsive for 5 minutes, AWS will attempt to recover it
@@ -586,6 +627,20 @@ Resources:
       CidrIp:
         Ref: SSHLocation
 
+  # Allow the apiserver load balancer to talk to the cluster on port 6443
+  ClusterSecGroupAllow6443FromLB:
+    Metadata:
+      Comment: Open up port 6443 for load balancing the API server
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: ClusterSecGroup
+      IpProtocol: tcp
+      FromPort: '6443'
+      ToPort: '6443'
+      SourceSecurityGroupId:
+        Ref: ApiLoadBalancerSecGroup
+
   # IAM role for nodes http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
   NodeRole:
     Type: AWS::IAM::Role
@@ -695,6 +750,50 @@ Resources:
       Path: "/"
       Roles:
       - Ref: MasterRole
+
+  # Create a placeholder load balancer for the API server.  Backend instances will be added by the master itself on the
+  # first boot in the startup script above.
+  ApiLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Listeners:
+      - Protocol: TCP
+        InstancePort: 6443
+        InstanceProtocol: TCP
+        LoadBalancerPort: 443
+      Subnets:
+      - Fn::If:
+        - LoadBalancerSubnetProvidedCondition
+        - Ref: LoadBalancerSubnetId
+        - Ref: ClusterSubnetId
+      SecurityGroups:
+      - Ref: ApiLoadBalancerSecGroup
+      Tags:
+      - Key: KubernetesCluster
+        Value:
+          Fn::If:
+          - AssociationProvidedCondition
+          - Ref: ClusterAssociation
+          - Ref: AWS::StackName
+      - Key: 'kubernetes.io/service-name'
+        Value: 'kube-system/apiserver-public'
+
+  # Security group to allow public access to port 443
+  ApiLoadBalancerSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for API server load balancer
+      VpcId:
+        Ref: VPCID
+      SecurityGroupIngress:
+        CidrIp: 0.0.0.0/0
+        FromPort: 443
+        ToPort: 443
+        IpProtocol: tcp
+      Tags:
+      - Key: Name
+        Value: apiserver-lb-security-group
 
 # Outputs are what AWS will show you after stack creation
 # Generally they let you easily access some information about the stack
