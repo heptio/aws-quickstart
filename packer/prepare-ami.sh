@@ -23,6 +23,13 @@ curl --silent "https://packages.cloud.google.com/apt/doc/apt-key.gpg" | apt-key 
 
 echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
 
+# Preconfigure kubelet's systemd config to enable --cloud-provider=aws
+mkdir -p /etc/systemd/system/kubelet.service.d/
+cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+[Service]
+Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
+EOF
+
 apt-get update -q
 apt-get upgrade -qy
 apt-get install -qy \
