@@ -25,7 +25,6 @@ echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.l
 
 apt-get update -q
 apt-get upgrade -qy
-# Install docker but don't complain that /etc/default/docker has changed
 apt-get install -qy \
     docker.io \
     "kubelet=${kubernetes_release_version}-00" \
