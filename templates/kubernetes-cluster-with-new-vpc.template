@@ -532,6 +532,8 @@ Resources:
           Ref: AWS::StackName
         NetworkingProvider:
           Ref: NetworkingProvider
+        LoadBalancerSubnetId:
+          Ref: PublicSubnet
 
 Outputs:
   # Outputs from VPC creation
@@ -559,6 +561,20 @@ Outputs:
     Value:
       Fn::Sub:
         - 'ssh -A -L8080:localhost:8080 -o ProxyCommand=''ssh ubuntu@${BastionPublicIp} nc ${MasterPrivateIp} 22'' ubuntu@${MasterPrivateIp}'
+        - BastionPublicIp:
+            Fn::GetAtt:
+            - BastionHost
+            - PublicIp
+          MasterPrivateIp:
+            Fn::GetAtt:
+              - K8sStack
+              - Outputs.MasterPrivateIP
+
+  GetKubeConfigCommand:
+    Description: SCP command to grab the configuration file for accessing the new cluster.
+    Value:
+      Fn::Sub:
+        - 'scp -o ProxyCommand=''ssh ubuntu@${BastionPublicIp} nc ${MasterPrivateIp} 22'' ubuntu@${MasterPrivateIp}:~/kubeconfig ./kubeconfig'
         - BastionPublicIp:
             Fn::GetAtt:
             - BastionHost
