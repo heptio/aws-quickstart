@@ -282,6 +282,51 @@ Resources:
   K8sMasterInstance:
     Type: AWS::EC2::Instance
     DependsOn: ApiLoadBalancer
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          master-setup: master-setup
+        master-setup:
+          files:
+            # Configuration file for the cloudwatch agent. The file is a Mustache template, and we're creating it with
+            # the below context (mainly to substitute in the AWS Stack Name for the logging group.)
+            "/tmp/kubernetes-awslogs.conf":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
+              context:
+                StackName: !Ref AWS::StackName
+
+            # Installation script for the cloudwatch agent
+            "/usr/local/aws/awslogs-agent-setup.py":
+              source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+              mode: '000755'
+
+            # systemd init script for the cloudwatch logs agent
+            "/etc/systemd/system/awslogs.service":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+
+            # Setup script for initializing the Kubernetes master instance.  This is where most of the cluster
+            # initialization happens.  See scripts/setup-k8s-master.sh in the Quick Start repo for details.
+            "/tmp/setup-k8s-master.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-k8s-master.sh.in"
+              mode: '000755'
+              context:
+                LoadBalancerDns: !GetAtt ApiLoadBalancer.DNSName
+                LoadBalancerName: !Ref ApiLoadBalancer
+                ClusterToken: !GetAtt KubeadmToken.Token
+                NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
+                Region: !Ref AWS::Region
+
+          commands:
+            # Install the cloudwatch agent with configuration for the current region and log group name
+            "01-cloudwatch-agent-setup":
+              command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
+            # Enable the cloudwatch service and launch it
+            "02-cloudwatch-service-config":
+              command: "systemctl enable awslogs.service && systemctl start awslogs.service"
+
+            # Run the master setup
+            "03-master-setup":
+              command: "/tmp/setup-k8s-master.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZone:
@@ -324,90 +369,26 @@ Resources:
         - RegionMap
         - Ref: AWS::Region
         - '64'
-      # This is where most of the Kubernetes stuff happens
-      # The userdata contains a bash script that bootstraps Kubernetes
-      # and useful related software like Docker for containers and Calico networking
-      # The script itself gets written to /var/lib/cloud/instance/scripts/part-001
-      # on the node, so you can view it there if you need to debug
+      # The userdata script is launched on startup, but contains only the commands that call out to cfn-init, which runs
+      # the commands in the metadata above, and cfn-signal, which signals when the initialization is complete.
       UserData:
         Fn::Base64:
-          Fn::Sub:
-          - |
-            #!/bin/bash -v
+          Fn::Sub: |
+            #!/bin/bash
+            set -o xtrace
 
-            set -e
+            /usr/local/bin/cfn-init \
+              --verbose \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource K8sMasterInstance \
+              --configsets master-setup
 
-            # Install Cloudwatch Logs
-            mkdir -p /usr/local/aws
-            wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
-            chmod +x /usr/local/aws/awslogs-agent-setup.py
-
-            cat <<EOF > /tmp/kubernetes-awslogs.conf
-            [general]
-            state_file = /var/awslogs/state/agent-state
-
-            [/var/log/kube*]
-            file = /var/log/kube*
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-
-            [/var/log/cloud-init-output.log]
-            file = /var/log/cloud-init-output.log
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-            EOF
-
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
-
-            cat <<EOF > /etc/systemd/system/awslogs.service
-            [Service]
-            Type=simple
-            Restart=always
-            KillMode=process
-            TimeoutSec=infinity
-            PIDFile=/var/awslogs/state/awslogs.pid
-            ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
-            EOF
-
-            systemctl enable awslogs.service
-            systemctl start awslogs.service
-
-            # reset kubeadm (workaround for kubelet package presence)
-            kubeadm reset
-
-            # Initialize master node
-            kubeadm init \
-              --cloud-provider=aws \
-              --token=${KubeadmToken.Token} \
-              --api-external-dns-names=${LoadBalancerHostname} \
-              --use-kubernetes-version=v1.5.2
-
-            # Add-on for network Calico
-            # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
-            # so pods can communicate
-            kubectl apply -f https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml
-
-            # Add this machine (master) to the load balancer for external access
-            sudo aws elb register-instances-with-load-balancer \
-              --load-balancer-name ${LoadBalancerName} \
-              --instances $(ec2metadata --instance-id) \
-              --region ${AWS::Region}
-
-            # Grab the client config for the admin user and leave it in the user's home dir, but reconfigure it with
-            # some sed magic.  What we're doing here:
-            # - Replacing the server with the publicly-visible load balancer address
-            # - Disabling TLS verification (since the hostname is random and not one of the SANs in the server cert)
-            # - Omitting the CA data, since it's not allowed when you're disabling TLS verification
-            KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
-            cat /etc/kubernetes/admin.conf | \
-              sed "s#server: https://.*:6443#server: https://${LoadBalancerHostname}#" \
-              >$KUBECONFIG_OUTPUT
-            chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
-            chmod 0600 $KUBECONFIG_OUTPUT
-          - LoadBalancerHostname: !GetAtt ApiLoadBalancer.DNSName
-            LoadBalancerName: !Ref ApiLoadBalancer
+            /usr/local/bin/cfn-signal \
+              --exit-code $? \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource K8sMasterInstance
 
   # IAM role for Lambda function for generating kubeadm token
   LambdaExecutionRole:
@@ -500,6 +481,13 @@ Resources:
   # http://docs.aws.amazon.com/autoscaling/latest/userguide/AutoScalingGroup.html
   K8sNodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: K8sMasterInstance
+    CreationPolicy:
+      ResourceSignal:
+        # Ensure at least <K8sNodeCapacity> nodes have signaled success before
+        # this resource is considered created.
+        Count: !Ref K8sNodeCapacity
+        Timeout: PT10M
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZones:
@@ -538,6 +526,32 @@ Resources:
   # This tells AWS what kinds of servers we want in our Auto Scaling Group
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          node-setup: node-setup
+        node-setup:
+          # (See comments in the master instance Metadata for details.)
+          files:
+            "/tmp/kubernetes-awslogs.conf":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
+              context:
+                StackName:
+                  Ref: AWS::StackName
+            "/usr/local/aws/awslogs-agent-setup.py":
+              source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+              mode: '000755'
+            "/etc/systemd/system/awslogs.service":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+          commands:
+            "01-cloudwatch-agent-setup":
+              command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
+            "02-cloudwatch-service-config":
+              command: "systemctl enable awslogs.service && systemctl start awslogs.service"
+            # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
+            # all that's left is to join the cluster with the correct token.
+            "03-k8s-setup-node":
+              command: !Sub "kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
@@ -560,66 +574,26 @@ Resources:
       # control (See the ClusterSecGroup resource for details)
       SecurityGroups:
       - Ref: ClusterSecGroup
-      # This is where most of the Kubernetes stuff happens
-      # The userdata contains a bash script that bootstraps Kubernetes
-      # and useful related software like Docker for containers and Calico networking
-      # The script itself gets written to /var/lib/cloud/instance/scripts/part-001
-      # on each node, so you can view it there if you need to debug
+      # The userdata script is launched on startup, but contains only the commands that call out to cfn-init, which runs
+      # the commands in the metadata above, and cfn-signal, which signals when the initialization is complete.
       UserData:
         Fn::Base64:
           Fn::Sub: |
-            #!/bin/bash -v
+            #!/bin/bash
+            set -o xtrace
 
-            # Install Cloudwatch Logs
-            mkdir -p /usr/local/aws
-            wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
-            chmod +x /usr/local/aws/awslogs-agent-setup.py
+            /usr/local/bin/cfn-init \
+              --verbose \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource LaunchConfig \
+              --configsets node-setup
 
-            cat <<EOF > /tmp/kubernetes-awslogs.conf
-            [general]
-            state_file = /var/awslogs/state/agent-state
-
-            [/var/log/kube*]
-            file = /var/log/kube*
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-
-            [/var/log/cloud-init-output.log]
-            file = /var/log/cloud-init-output.log
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-            EOF
-
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
-
-            cat <<EOF > /etc/systemd/system/awslogs.service
-            [Service]
-            Type=simple
-            Restart=always
-            KillMode=process
-            TimeoutSec=infinity
-            PIDFile=/var/awslogs/state/awslogs.pid
-            ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
-            EOF
-
-            systemctl enable awslogs.service
-            systemctl start awslogs.service
-
-            # Create directory and file to enable --cloud-provider=aws for kubelet
-            # This is a systemd file
-            mkdir -p /etc/systemd/system/kubelet.service.d/
-            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
-            [Service]
-            Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
-            EOF
-
-            # reset kubeadm (workaround for kubelet package presence)
-            kubeadm reset
-
-            # Join master node
-            kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}
+            /usr/local/bin/cfn-signal \
+              --exit-code $? \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource K8sNodeGroup
 
   # Define the (one) security group for all machines in the cluster.  Keeping
   # just one security group helps with k8s's cloud-provider=aws integration so
