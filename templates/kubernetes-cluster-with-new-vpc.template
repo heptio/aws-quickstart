@@ -270,27 +270,20 @@ Resources:
       EnableDnsHostnames: 'true'
       Tags:
       - Key: Name
-        Value:
-          Ref: AWS::StackName
+        Value: !Ref AWS::StackName
 
   DHCPOptions:
     Type: AWS::EC2::DHCPOptions
     Properties:
-      DomainName:
-        Fn::Join:
-        - ''
-        - - Ref: AWS::Region
-          - ".compute.internal"
+      DomainName: !Sub "${AWS::Region}.compute.internal"
       DomainNameServers:
       - AmazonProvidedDNS
 
   VPCDHCPOptionsAssociation:
     Type: AWS::EC2::VPCDHCPOptionsAssociation
     Properties:
-      VpcId:
-        Ref: VPC
-      DhcpOptionsId:
-        Ref: DHCPOptions
+      VpcId: !Ref VPC
+      DhcpOptionsId: !Ref DHCPOptions
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -302,19 +295,15 @@ Resources:
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId:
-        Ref: VPC
-      InternetGatewayId:
-        Ref: InternetGateway
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       CidrBlock: '10.0.0.0/19'
-      AvailabilityZone:
-        Ref: AvailabilityZone
+      AvailabilityZone: !Ref AvailabilityZone
       Tags:
       - Key: Name
         Value: Private subnet
@@ -324,19 +313,16 @@ Resources:
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       CidrBlock: '10.0.128.0/20'
-      AvailabilityZone:
-        Ref: AvailabilityZone
+      AvailabilityZone: !Ref AvailabilityZone
       Tags:
       - Key: Name
         Value: Public subnet
       - Key: Network
         Value: Public
       - Key: KubernetesCluster
-        Value:
-          Ref: AWS::StackName
+        Value: !Ref AWS::StackName
       MapPublicIpOnLaunch: true
 
   # The NAT IP for the private subnet, as seen from within the public one
@@ -351,28 +337,21 @@ Resources:
     DependsOn: VPCGatewayAttachment
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId:
-        Fn::GetAtt:
-        - NATEIP
-        - AllocationId
-      SubnetId:
-        Ref: PublicSubnet
+      AllocationId: !GetAtt NATEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
 
   PublicSubnetRoute:
     DependsOn: VPCGatewayAttachment
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PublicSubnetRouteTable
+      RouteTableId: !Ref PublicSubnetRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: InternetGateway
+      GatewayId: !Ref InternetGateway
 
   PrivateSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       Tags:
       - Key: Name
         Value: Private subnets
@@ -383,25 +362,20 @@ Resources:
     DependsOn: VPCGatewayAttachment
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PrivateSubnetRouteTable
+      RouteTableId: !Ref PrivateSubnetRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId:
-        Ref: NATGateway
+      NatGatewayId: !Ref NATGateway
 
   PrivateSubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId:
-        Ref: PrivateSubnet
-      RouteTableId:
-        Ref: PrivateSubnetRouteTable
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateSubnetRouteTable
 
   PublicSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       Tags:
       - Key: Name
         Value: Public Subnets
@@ -412,19 +386,15 @@ Resources:
     DependsOn: VPCGatewayAttachment
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PublicSubnetRouteTable
+      RouteTableId: !Ref PublicSubnetRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: InternetGateway
+      GatewayId: !Ref InternetGateway
 
   PublicSubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId:
-        Ref: PublicSubnet
-      RouteTableId:
-        Ref: PublicSubnetRouteTable
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicSubnetRouteTable
 
   # Taken from github.com/aws-quickstart/quickstart-linux-bastion.  We don't
   # call it directly because that quickstart forces 2 bastion hosts and we only
@@ -437,14 +407,12 @@ Resources:
         - RegionMap
         - Ref: AWS::Region
         - '64'
-      InstanceType:
-        Ref: BastionInstanceType
+      InstanceType: !Ref BastionInstanceType
       NetworkInterfaces:
       - AssociatePublicIpAddress: true
         DeleteOnTermination: true
         DeviceIndex: 0
-        SubnetId:
-          Ref: PublicSubnet
+        SubnetId: !Ref PublicSubnet
         # This address is chosen because our public subnet begins at 10.0.128.0/20
         PrivateIpAddress: '10.0.128.5'
         GroupSet:
@@ -452,8 +420,7 @@ Resources:
       Tags:
       - Key: Name
         Value: bastion-host
-      KeyName:
-        Ref: KeyName
+      KeyName: !Ref KeyName
       UserData:
         Fn::Base64:
           Fn::Sub: |
@@ -472,140 +439,72 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH access via port 22
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       SecurityGroupIngress:
       - IpProtocol: tcp
         FromPort: '22'
         ToPort: '22'
-        CidrIp:
-          Ref: SSHLocation
+        CidrIp: !Ref SSHLocation
 
   K8sStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL:
-        Fn::Join:
-        - ''
-        - - 'https://'
-          - Ref: QSS3BucketName
-          - '.s3.amazonaws.com/'
-          - Ref: QSS3KeyPrefix
-          - /templates/kubernetes-cluster.template
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/kubernetes-cluster.template"
       Parameters:
-        VPCID:
-          Ref: VPC
-        AvailabilityZone:
-          Ref: AvailabilityZone
-        InstanceType:
-          Ref: InstanceType
-        ClusterSubnetId:
-          Ref: PrivateSubnet
+        VPCID: !Ref VPC
+        AvailabilityZone: !Ref AvailabilityZone
+        InstanceType: !Ref InstanceType
+        ClusterSubnetId: !Ref PrivateSubnet
         # Direct SSH access only from the bastion host itself
-        SSHLocation:
-          Fn::Join:
-            - '/'
-            - - Fn::GetAtt:
-                - BastionHost
-                - PrivateIp
-              - '32'
-        KeyName:
-          Ref: KeyName
-        K8sNodeCapacity:
-          Ref: K8sNodeCapacity
-        QSS3BucketName:
-          Ref: QSS3BucketName
-        QSS3KeyPrefix:
-          Ref: QSS3KeyPrefix
-        ClusterAssociation:
-          Ref: AWS::StackName
-        NetworkingProvider:
-          Ref: NetworkingProvider
-        LoadBalancerSubnetId:
-          Ref: PublicSubnet
+        SSHLocation: !Sub "${BastionHost.PrivateIp}/32"
+        KeyName: !Ref KeyName
+        K8sNodeCapacity: !Ref K8sNodeCapacity
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        ClusterAssociation: !Ref AWS::StackName
+        NetworkingProvider: !Ref NetworkingProvider
+        LoadBalancerSubnetId: !Ref PublicSubnet
 
 Outputs:
   # Outputs from VPC creation
   VPCID:
     Description: ID of the newly-created EC2 VPC
-    Value:
-      Ref: VPC
+    Value: !Ref VPC
 
   BastionHostPublicIP:
     Description: IP Address of the bastion host for the newly-created EC2 VPC
-    Value:
-      Fn::GetAtt:
-      - BastionHost
-      - PublicIp
+    Value: !GetAtt BastionHost.PublicIp
 
   BastionHostPublicDNS:
     Description: DNS FQDN of the bastion host for the newly-created EC2 VPC
-    Value:
-      Fn::GetAtt:
-      - BastionHost
-      - PublicDnsName
+    Value: !GetAtt BastionHost.PublicDnsName
 
   SSHProxyCommand:
     Description: SSH Command to run to proxy to the master instance through the bastion host to access port 8080
-    Value:
-      Fn::Sub:
-        - 'ssh -A -L8080:localhost:8080 -o ProxyCommand=''ssh ubuntu@${BastionPublicIp} nc ${MasterPrivateIp} 22'' ubuntu@${MasterPrivateIp}'
-        - BastionPublicIp:
-            Fn::GetAtt:
-            - BastionHost
-            - PublicIp
-          MasterPrivateIp:
-            Fn::GetAtt:
-              - K8sStack
-              - Outputs.MasterPrivateIP
+    Value: !Sub "ssh -A -L8080:localhost:8080 -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIP} 22' ubuntu@${K8sStack.Outputs.MasterPrivateIP}"
 
   GetKubeConfigCommand:
     Description: SCP command to grab the configuration file for accessing the new cluster.
-    Value:
-      Fn::Sub:
-        - 'scp -o ProxyCommand=''ssh ubuntu@${BastionPublicIp} nc ${MasterPrivateIp} 22'' ubuntu@${MasterPrivateIp}:~/kubeconfig ./kubeconfig'
-        - BastionPublicIp:
-            Fn::GetAtt:
-            - BastionHost
-            - PublicIp
-          MasterPrivateIp:
-            Fn::GetAtt:
-              - K8sStack
-              - Outputs.MasterPrivateIP
+    Value: !Sub "scp -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIP} 22' ubuntu@${K8sStack.Outputs.MasterPrivateIP}:~/kubeconfig ~/kubeconfig"
 
   # Outputs forwarded from the k8s template
   MasterInstanceId:
     Description: InstanceId of the master EC2 instance
-    Value:
-      Fn::GetAtt:
-      - K8sStack
-      - Outputs.MasterInstanceId
+    Value: !GetAtt K8sStack.Outputs.MasterInstanceId
 
   MasterPrivateIP:
     Description: Private IP address of the master
-    Value:
-      Fn::GetAtt:
-      - K8sStack
-      - Outputs.MasterPrivateIP
+    Value: !GetAtt K8sStack.Outputs.MasterPrivateIP
 
   NodeGroupInstanceId:
     Description: InstanceId of the newly created NodeGroup
-    Value:
-      Fn::GetAtt:
-      - K8sStack
-      - Outputs.NodeGroupInstanceId
+    Value: !GetAtt K8sStack.Outputs.NodeGroupInstanceId
 
   JoinNodes:
     Description: Command to join more nodes to this cluster
-    Value:
-      Fn::GetAtt:
-      - K8sStack
-      - Outputs.JoinNodes
+    Value: !GetAtt K8sStack.Outputs.JoinNodes
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions at
       http://jump.heptio.com/aws-qs-next
-    Value:
-      Fn::GetAtt:
-      - K8sStack
-      - Outputs.NextSteps
+    Value: !GetAtt K8sStack.Outputs.NextSteps

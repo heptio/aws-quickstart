@@ -260,12 +260,12 @@ Conditions:
   AssociationProvidedCondition:
     Fn::Not:
     - Fn::Equals:
-      - Ref: ClusterAssociation
+      - !Ref ClusterAssociation
       - ''
   LoadBalancerSubnetProvidedCondition:
     Fn::Not:
     - Fn::Equals:
-      - Ref: LoadBalancerSubnetId
+      - !Ref LoadBalancerSubnetId
       - ''
 
 # Resources are the AWS services we want to actually create as part of the Stack
@@ -274,39 +274,78 @@ Resources:
   KubernetesLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName:
-        Ref: AWS::StackName
+      LogGroupName: !Ref AWS::StackName
       RetentionInDays: 14
 
   # This is an EC2 instance that will serve as our master node
   K8sMasterInstance:
     Type: AWS::EC2::Instance
     DependsOn: ApiLoadBalancer
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          master-setup: master-setup
+        master-setup:
+          files:
+            # Configuration file for the cloudwatch agent. The file is a Mustache template, and we're creating it with
+            # the below context (mainly to substitute in the AWS Stack Name for the logging group.)
+            "/tmp/kubernetes-awslogs.conf":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
+              context:
+                StackName: !Ref AWS::StackName
+
+            # Installation script for the cloudwatch agent
+            "/usr/local/aws/awslogs-agent-setup.py":
+              source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+              mode: '000755'
+
+            # systemd init script for the cloudwatch logs agent
+            "/etc/systemd/system/awslogs.service":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+
+            # Setup script for initializing the Kubernetes master instance.  This is where most of the cluster
+            # initialization happens.  See scripts/setup-k8s-master.sh in the Quick Start repo for details.
+            "/tmp/setup-k8s-master.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-k8s-master.sh.in"
+              mode: '000755'
+              context:
+                LoadBalancerDns: !GetAtt ApiLoadBalancer.DNSName
+                LoadBalancerName: !Ref ApiLoadBalancer
+                ClusterToken: !GetAtt KubeadmToken.Token
+                NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
+                Region: !Ref AWS::Region
+
+          commands:
+            # Install the cloudwatch agent with configuration for the current region and log group name
+            "01-cloudwatch-agent-setup":
+              command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
+            # Enable the cloudwatch service and launch it
+            "02-cloudwatch-service-config":
+              command: "systemctl enable awslogs.service && systemctl start awslogs.service"
+
+            # Run the master setup
+            "03-master-setup":
+              command: "/tmp/setup-k8s-master.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
-      AvailabilityZone:
-        Ref: AvailabilityZone
+      AvailabilityZone: !Ref AvailabilityZone
       # Refers to the MasterInstanceProfile resource, which applies the IAM role for the master instance
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
       # This is needed for the Kubernetes-AWS cloud-provider integration
-      IamInstanceProfile:
-        Ref: MasterInstanceProfile
+      IamInstanceProfile: !Ref MasterInstanceProfile
       # Type of instance; the default is t2.medium
-      InstanceType:
-        Ref: InstanceType
+      InstanceType: !Ref InstanceType
       # Adds our SSH key to the instance
-      KeyName:
-        Ref: KeyName
+      KeyName: !Ref KeyName
       NetworkInterfaces:
       - DeleteOnTermination: true
         DeviceIndex: 0
-        SubnetId:
-          Ref: ClusterSubnetId
+        SubnetId: !Ref ClusterSubnetId
         # Joins two security groups: A default group for cluster communication, and the new allow22 group
         # The default group allows all instances in the same stack to communicate internally
         # The allow22 group allows external communication on port 22 from a chosen CIDR range
         GroupSet:
-        - Ref: ClusterSecGroup
+        - !Ref ClusterSecGroup
       # Designates a name for this EC2 instance that will appear in the instances list (k8s-master)
       # Tags it with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
@@ -316,98 +355,34 @@ Resources:
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: ClusterAssociation
-          - Ref: AWS::StackName
+          - !Ref ClusterAssociation
+          - !Ref AWS::StackName
       # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
         - RegionMap
-        - Ref: AWS::Region
+        - !Ref AWS::Region
         - '64'
-      # This is where most of the Kubernetes stuff happens
-      # The userdata contains a bash script that bootstraps Kubernetes
-      # and useful related software like Docker for containers and Calico networking
-      # The script itself gets written to /var/lib/cloud/instance/scripts/part-001
-      # on the node, so you can view it there if you need to debug
+      # The userdata script is launched on startup, but contains only the commands that call out to cfn-init, which runs
+      # the commands in the metadata above, and cfn-signal, which signals when the initialization is complete.
       UserData:
         Fn::Base64:
-          Fn::Sub:
-          - |
-            #!/bin/bash -v
+          Fn::Sub: |
+            #!/bin/bash
+            set -o xtrace
 
-            set -e
+            /usr/local/bin/cfn-init \
+              --verbose \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource K8sMasterInstance \
+              --configsets master-setup
 
-            # Install Cloudwatch Logs
-            mkdir -p /usr/local/aws
-            wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
-            chmod +x /usr/local/aws/awslogs-agent-setup.py
-
-            cat <<EOF > /tmp/kubernetes-awslogs.conf
-            [general]
-            state_file = /var/awslogs/state/agent-state
-
-            [/var/log/kube*]
-            file = /var/log/kube*
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-
-            [/var/log/cloud-init-output.log]
-            file = /var/log/cloud-init-output.log
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-            EOF
-
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
-
-            cat <<EOF > /etc/systemd/system/awslogs.service
-            [Service]
-            Type=simple
-            Restart=always
-            KillMode=process
-            TimeoutSec=infinity
-            PIDFile=/var/awslogs/state/awslogs.pid
-            ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
-            EOF
-
-            systemctl enable awslogs.service
-            systemctl start awslogs.service
-
-            # reset kubeadm (workaround for kubelet package presence)
-            kubeadm reset
-
-            # Initialize master node
-            kubeadm init \
-              --cloud-provider=aws \
-              --token=${KubeadmToken.Token} \
-              --api-external-dns-names=${LoadBalancerHostname} \
-              --use-kubernetes-version=v1.5.2
-
-            # Add-on for network Calico
-            # (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
-            # so pods can communicate
-            kubectl apply -f https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml
-
-            # Add this machine (master) to the load balancer for external access
-            sudo aws elb register-instances-with-load-balancer \
-              --load-balancer-name ${LoadBalancerName} \
-              --instances $(ec2metadata --instance-id) \
-              --region ${AWS::Region}
-
-            # Grab the client config for the admin user and leave it in the user's home dir, but reconfigure it with
-            # some sed magic.  What we're doing here:
-            # - Replacing the server with the publicly-visible load balancer address
-            # - Disabling TLS verification (since the hostname is random and not one of the SANs in the server cert)
-            # - Omitting the CA data, since it's not allowed when you're disabling TLS verification
-            KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
-            cat /etc/kubernetes/admin.conf | \
-              sed "s#server: https://.*:6443#server: https://${LoadBalancerHostname}#" \
-              >$KUBECONFIG_OUTPUT
-            chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
-            chmod 0600 $KUBECONFIG_OUTPUT
-          - LoadBalancerHostname: !GetAtt ApiLoadBalancer.DNSName
-            LoadBalancerName: !Ref ApiLoadBalancer
+            /usr/local/bin/cfn-signal \
+              --exit-code $? \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource K8sMasterInstance
 
   # IAM role for Lambda function for generating kubeadm token
   LambdaExecutionRole:
@@ -485,37 +460,37 @@ Resources:
       Threshold: '0'
       # This is the call that actually tries to recover the instance
       AlarmActions:
-      - Fn::Join:
-        - ''
-        - - 'arn:aws:automate:'
-          - Ref: AWS::Region
-          - ":ec2:recover"
+        - !Sub "arn:aws:automate:${AWS::Region}:ec2:recover"
       # Applies this alarm to our K8sMasterInstance
       Dimensions:
       - Name: InstanceId
-        Value:
-          Ref: K8sMasterInstance
+        Value: !Ref K8sMasterInstance
 
   # This is the Auto Scaling Group that contains EC2 instances that are Kubernetes nodes
   # http://docs.aws.amazon.com/autoscaling/latest/userguide/AutoScalingGroup.html
   K8sNodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: K8sMasterInstance
+    CreationPolicy:
+      ResourceSignal:
+        # Ensure at least <K8sNodeCapacity> nodes have signaled success before
+        # this resource is considered created.
+        Count: !Ref K8sNodeCapacity
+        Timeout: PT10M
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZones:
-      - Ref: AvailabilityZone
+      - !Ref AvailabilityZone
       # Refers to the K8sNodeCapacity parameter, which specifies the number of nodes (1-3)
-      DesiredCapacity:
-        Ref: K8sNodeCapacity
+      DesiredCapacity: !Ref K8sNodeCapacity
       # Refers to the LaunchConfig, which has specific config details for the EC2 instances
-      LaunchConfigurationName:
-        Ref: LaunchConfig
+      LaunchConfigurationName: !Ref LaunchConfig
       # More cluster sizing
       MinSize: '1'
       MaxSize: '3'
       # VPC Zone Identifier is the subnets to put the hosts in
       VPCZoneIdentifier:
-        - Ref: ClusterSubnetId
+        - !Ref ClusterSubnetId
       # Designates names for these EC2 instances that will appear in the instances list (k8s-node)
       # Tags each node with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
       Tags:
@@ -526,8 +501,8 @@ Resources:
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: ClusterAssociation
-          - Ref: AWS::StackName
+          - !Ref ClusterAssociation
+          - !Ref AWS::StackName
         PropagateAtLaunch: 'true'
     # Tells the group how many instances to update at a time, if an update is applied
     UpdatePolicy:
@@ -538,88 +513,70 @@ Resources:
   # This tells AWS what kinds of servers we want in our Auto Scaling Group
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          node-setup: node-setup
+        node-setup:
+          # (See comments in the master instance Metadata for details.)
+          files:
+            "/tmp/kubernetes-awslogs.conf":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
+              context:
+                StackName: !Ref AWS::StackName
+            "/usr/local/aws/awslogs-agent-setup.py":
+              source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+              mode: '000755'
+            "/etc/systemd/system/awslogs.service":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+          commands:
+            "01-cloudwatch-agent-setup":
+              command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
+            "02-cloudwatch-service-config":
+              command: "systemctl enable awslogs.service && systemctl start awslogs.service"
+            # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
+            # all that's left is to join the cluster with the correct token.
+            "03-k8s-setup-node":
+              command: !Sub "kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
       # This is needed for the Kubernetes-AWS cloud-provider integration
-      IamInstanceProfile:
-        Ref: NodeInstanceProfile
+      IamInstanceProfile: !Ref NodeInstanceProfile
       # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
         - RegionMap
-        - Ref: AWS::Region
+        - !Ref AWS::Region
         - '64'
       # Type of instance; the default is t2.medium
-      InstanceType:
-        Ref: InstanceType
+      InstanceType: !Ref InstanceType
       # Adds our SSH key to the instance
-      KeyName:
-        Ref: KeyName
+      KeyName: !Ref KeyName
       # Join the cluster security group so that we can customize the access
       # control (See the ClusterSecGroup resource for details)
       SecurityGroups:
-      - Ref: ClusterSecGroup
-      # This is where most of the Kubernetes stuff happens
-      # The userdata contains a bash script that bootstraps Kubernetes
-      # and useful related software like Docker for containers and Calico networking
-      # The script itself gets written to /var/lib/cloud/instance/scripts/part-001
-      # on each node, so you can view it there if you need to debug
+      - !Ref ClusterSecGroup
+      # The userdata script is launched on startup, but contains only the commands that call out to cfn-init, which runs
+      # the commands in the metadata above, and cfn-signal, which signals when the initialization is complete.
       UserData:
         Fn::Base64:
           Fn::Sub: |
-            #!/bin/bash -v
+            #!/bin/bash
+            set -o xtrace
 
-            # Install Cloudwatch Logs
-            mkdir -p /usr/local/aws
-            wget -O /usr/local/aws/awslogs-agent-setup.py https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
-            chmod +x /usr/local/aws/awslogs-agent-setup.py
+            /usr/local/bin/cfn-init \
+              --verbose \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource LaunchConfig \
+              --configsets node-setup
 
-            cat <<EOF > /tmp/kubernetes-awslogs.conf
-            [general]
-            state_file = /var/awslogs/state/agent-state
-
-            [/var/log/kube*]
-            file = /var/log/kube*
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-
-            [/var/log/cloud-init-output.log]
-            file = /var/log/cloud-init-output.log
-            log_group_name = ${AWS::StackName}
-            log_stream_name = {instance_id}
-            datetime_format = %b %d %H:%M:%S
-            EOF
-
-            python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf
-
-            cat <<EOF > /etc/systemd/system/awslogs.service
-            [Service]
-            Type=simple
-            Restart=always
-            KillMode=process
-            TimeoutSec=infinity
-            PIDFile=/var/awslogs/state/awslogs.pid
-            ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
-            EOF
-
-            systemctl enable awslogs.service
-            systemctl start awslogs.service
-
-            # Create directory and file to enable --cloud-provider=aws for kubelet
-            # This is a systemd file
-            mkdir -p /etc/systemd/system/kubelet.service.d/
-            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
-            [Service]
-            Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
-            EOF
-
-            # reset kubeadm (workaround for kubelet package presence)
-            kubeadm reset
-
-            # Join master node
-            kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}
+            /usr/local/bin/cfn-signal \
+              --exit-code $? \
+              --stack '${AWS::StackName}' \
+              --region '${AWS::Region}' \
+              --resource K8sNodeGroup
 
   # Define the (one) security group for all machines in the cluster.  Keeping
   # just one security group helps with k8s's cloud-provider=aws integration so
@@ -628,8 +585,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for all machines in the cluster
-      VpcId:
-        Ref: VPCID
+      VpcId: !Ref VPCID
       # Security Groups must be tagged with KubernetesCluster=<cluster> so that
       # they can coexist in the same VPC
       Tags:
@@ -637,8 +593,8 @@ Resources:
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: ClusterAssociation
-          - Ref: AWS::StackName
+          - !Ref ClusterAssociation
+          - !Ref AWS::StackName
       - Key: Name
         Value: k8s-cluster-security-group
 
@@ -647,10 +603,8 @@ Resources:
   ClusterSecGroupCrossTalk:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId:
-        Ref: ClusterSecGroup
-      SourceSecurityGroupId:
-        Ref: ClusterSecGroup
+      GroupId: !Ref ClusterSecGroup
+      SourceSecurityGroupId: !Ref ClusterSecGroup
       IpProtocol: '-1'
       FromPort: '0'
       ToPort: '65535'
@@ -662,13 +616,11 @@ Resources:
       Comment: Open up port 22 for SSH into each machine
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId:
-        Ref: ClusterSecGroup
+      GroupId: !Ref ClusterSecGroup
       IpProtocol: tcp
       FromPort: '22'
       ToPort: '22'
-      CidrIp:
-        Ref: SSHLocation
+      CidrIp: !Ref SSHLocation
 
   # Allow the apiserver load balancer to talk to the cluster on port 6443
   ClusterSecGroupAllow6443FromLB:
@@ -676,13 +628,11 @@ Resources:
       Comment: Open up port 6443 for load balancing the API server
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId:
-        Ref: ClusterSecGroup
+      GroupId: !Ref ClusterSecGroup
       IpProtocol: tcp
       FromPort: '6443'
       ToPort: '6443'
-      SourceSecurityGroupId:
-        Ref: ApiLoadBalancerSecGroup
+      SourceSecurityGroupId: !Ref ApiLoadBalancerSecGroup
 
   # IAM role for nodes http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
   NodeRole:
@@ -735,7 +685,7 @@ Resources:
     Properties:
       Path: "/"
       Roles:
-      - Ref: NodeRole
+      - !Ref NodeRole
 
   # IAM role for the master node http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
   MasterRole:
@@ -792,7 +742,7 @@ Resources:
     Properties:
       Path: "/"
       Roles:
-      - Ref: MasterRole
+      - !Ref MasterRole
 
   # Create a placeholder load balancer for the API server.  Backend instances will be added by the master itself on the
   # first boot in the startup script above.
@@ -808,17 +758,17 @@ Resources:
       Subnets:
       - Fn::If:
         - LoadBalancerSubnetProvidedCondition
-        - Ref: LoadBalancerSubnetId
-        - Ref: ClusterSubnetId
+        - !Ref LoadBalancerSubnetId
+        - !Ref ClusterSubnetId
       SecurityGroups:
-      - Ref: ApiLoadBalancerSecGroup
+      - !Ref ApiLoadBalancerSecGroup
       Tags:
       - Key: KubernetesCluster
         Value:
           Fn::If:
           - AssociationProvidedCondition
-          - Ref: ClusterAssociation
-          - Ref: AWS::StackName
+          - !Ref ClusterAssociation
+          - !Ref AWS::StackName
       - Key: 'kubernetes.io/service-name'
         Value: 'kube-system/apiserver-public'
 
@@ -827,8 +777,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for API server load balancer
-      VpcId:
-        Ref: VPCID
+      VpcId: !Ref VPCID
       SecurityGroupIngress:
         CidrIp: 0.0.0.0/0
         FromPort: 443
@@ -845,8 +794,7 @@ Resources:
 Outputs:
   MasterInstanceId:
     Description: InstanceId of the master EC2 instance
-    Value:
-      Ref: K8sMasterInstance
+    Value: !Ref K8sMasterInstance
 
   MasterPrivateIP:
     Description: Private IP address of the master
@@ -854,8 +802,7 @@ Outputs:
 
   NodeGroupInstanceId:
     Description: InstanceId of the newly created NodeGroup
-    Value:
-      Ref: K8sNodeGroup
+    Value: !Ref K8sNodeGroup
 
   JoinNodes:
     Description: Command to run on node to join it to this cluster
