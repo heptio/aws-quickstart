@@ -420,7 +420,7 @@ Resources:
           import random
           import string
           import cfnresponse
-          def id_generator(size, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
+          def id_generator(size, chars=string.ascii_lowercase + string.digits):
             return ''.join(random.choice(chars) for _ in range(size))
           def handler(event, context):
             if event['RequestType'] == 'Delete':
