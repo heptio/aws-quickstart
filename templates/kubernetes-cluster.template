@@ -383,6 +383,9 @@ Resources:
               --stack '${AWS::StackName}' \
               --region '${AWS::Region}' \
               --resource K8sMasterInstance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
 
   # IAM role for Lambda function for generating kubeadm token
   LambdaExecutionRole:
@@ -796,7 +799,7 @@ Outputs:
     Description: InstanceId of the master EC2 instance
     Value: !Ref K8sMasterInstance
 
-  MasterPrivateIP:
+  MasterPrivateIp:
     Description: Private IP address of the master
     Value: !GetAtt K8sMasterInstance.PrivateIp
 

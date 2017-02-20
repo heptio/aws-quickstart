@@ -8,7 +8,7 @@ More complete instructions coming soon.
 
 ```
 STACK=stack-name
-TEMPLATEPATH=file:///....
+TEMPLATEPATH=file://templates/kubernetes-cluster-with-new-vpc.template
 KEYNAME=<aws-key-name>
 AZ=us-west-2b
 aws cloudformation create-stack \
@@ -45,4 +45,19 @@ aws cloudformation create-stack \
     ParameterKey=QSS3BucketName,ParameterValue=$HEPTIO_S3_BUCKET \
     ParameterKey=QSS3KeyPrefix,ParameterValue=$HEPTIO_S3_KEY_PREFIX \
   --capabilities=CAPABILITY_IAM
+```
+## Using the cluster
+
+```
+# Wait for the cluster to be up and running
+aws cloudformation wait stack-create-complete --stack-name $STACK
+
+# Get the command to download the kubeconfig file for the cluster
+KUBECFG_DL=$(aws cloudformation describe-stacks --stack-name=$STACK --query 'Stacks[0].Outputs[?OutputKey==`GetKubeConfigCommand`].OutputValue' --output text)
+echo $KUBECFG_DL
+eval $KUBECFG_DL
+
+# Set an environment variable to tell kubectl where to find this file
+export KUBECONFIG=$(pwd)/kubeconfig
+kubectl get nodes
 ```
