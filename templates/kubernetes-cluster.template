@@ -39,6 +39,7 @@ Metadata:
         default: Access Configuration
       Parameters:
       - SSHLocation
+      - ApiLbLocation
       - KeyName
     - Label:
         default: Kubernetes Configuration
@@ -64,6 +65,8 @@ Metadata:
         default: Subnet
       SSHLocation:
         default: SSH Ingress Location
+      ApiLbLocation:
+        default: API Ingress Location
       InstanceType:
         default: Instance Type
       K8sNodeCapacity:
@@ -161,7 +164,6 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
 
-  # Default 0.0.0.0/0 (all locations)
   # Specifies the IP range from which you will have SSH access over port 22
   # Used in the allow22 SecurityGroup
   SSHLocation:
@@ -169,7 +171,16 @@ Parameters:
     Type: String
     MinLength: '9'
     MaxLength: '18'
-    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  # Specifies the IP range from which you will have HTTPS access to the Kubernetes API server load balancer
+  # Used in the ApiLoadBalancerSecGroup SecurityGroup
+  ApiLbLocation:
+    Description: IP address range that can be used to access the API over HTTPs
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
@@ -782,7 +793,7 @@ Resources:
       GroupDescription: Security group for API server load balancer
       VpcId: !Ref VPCID
       SecurityGroupIngress:
-        CidrIp: 0.0.0.0/0
+        CidrIp: !Ref ApiLbLocation
         FromPort: 443
         ToPort: 443
         IpProtocol: tcp

@@ -38,7 +38,7 @@ Metadata:
     - Label:
         default: Access Configuration
       Parameters:
-      - SSHLocation
+      - AdminIngressLocation
       - KeyName
     - Label:
         default: Kubernetes Configuration
@@ -56,8 +56,8 @@ Metadata:
         default: SSH Key
       AvailabilityZone:
         default: Availability Zone
-      SSHLocation:
-        default: SSH Ingress Location
+      AdminIngressLocation:
+        default: Admin Ingress Location
       InstanceType:
         default: Instance Type
       BastionInstanceType:
@@ -175,12 +175,11 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
 
-  SSHLocation:
-    Description: IP address range that can be used to SSH to the Bastion Host
+  AdminIngressLocation:
+    Description: IP address range that can be used to SSH to the Bastion Host and access the API over HTTPS
     Type: String
     MinLength: '9'
     MaxLength: '18'
-    Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
@@ -444,7 +443,7 @@ Resources:
       - IpProtocol: tcp
         FromPort: '22'
         ToPort: '22'
-        CidrIp: !Ref SSHLocation
+        CidrIp: !Ref AdminIngressLocation
 
   K8sStack:
     Type: AWS::CloudFormation::Stack
@@ -457,6 +456,7 @@ Resources:
         ClusterSubnetId: !Ref PrivateSubnet
         # Direct SSH access only from the bastion host itself
         SSHLocation: !Sub "${BastionHost.PrivateIp}/32"
+        ApiLbLocation: !Ref AdminIngressLocation
         KeyName: !Ref KeyName
         K8sNodeCapacity: !Ref K8sNodeCapacity
         QSS3BucketName: !Ref QSS3BucketName
