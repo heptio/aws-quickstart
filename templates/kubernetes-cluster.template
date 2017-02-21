@@ -13,18 +13,22 @@
 #    limitations under the License.
 
 ---
-AWSTemplateFormatVersion: '2010-09-09' # Template version (this exact version is required by AWS)
-Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluster.
-  The master node is an auto-recovering Amazon EC2 instance. Two more EC2
-  instances in an AutoScalingGroup join the Kubernetes cluster as nodes. The
-  AMI is chosen based on the region in which the stack is run. This example
-  creates an EC2 security group for all instances to give you SSH access. Next
-  steps: http://jump.heptio.com/aws-qs-next **WARNING** This template creates
-  three Amazon EC2 instances. You will be billed for the AWS resources used if
-  you create a stack from this template. **CREDIT** This template is provided
-  courtesy of Heptio (https://www.heptio.com/), by Joe Beda, Sharon
-  Campbell, and Ken Simon.'
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes
+  cluster in an existing VPC. This template is for users who want to add
+  a Kubernetes cluster to existing AWS infrastructure. The master node is
+  an auto-recovering Amazon EC2 instance. 1-20 additional EC2 instances in an
+  AutoScalingGroup join the Kubernetes cluster as nodes. An ELB provides
+  configurable external access to the Kubernetes API. If you choose a private
+  subnet, make sure it has a bastion host for SSH access to your cluster. If you
+  choose a public subnet, you can connect directly to the master node. The stack
+  is suitable for development and small single-team clusters. **WARNING** This
+  template creates four Amazon EC2 instances with default settings. You will
+  be billed for the AWS resources used if you create a stack from this template.
+  **SUPPORT** Please visit http://jump.heptio.com/aws-qs-help for support.
+  **NEXT STEPS** Please visit http://jump.heptio.com/aws-qs-next.'
 
+# The Metadata tells AWS how to display the parameters during stack creation
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -83,35 +87,39 @@ Metadata:
         default: Load Balancer Subnet
 
 
-# Parameters allow the user to pass settings to the template before building the stack
+# The Parameters allow the user to pass custom settings to the stack before creation
 Parameters:
   # Required. Calls for the name of an existing EC2 KeyPair, to enable SSH access to the instances
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html
   KeyName:
-    Description: Existing EC2 KeyPair for SSH access
+    Description: Existing EC2 KeyPair for SSH access.
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
 
   VPCID:
-    Description: 'Your VPC to use for this cluster'
+    Description: Existing VPC to use for this cluster.
     Type: AWS::EC2::VPC::Id
 
   ClusterSubnetId:
-    Description: 'The subnet to use for this cluster.  Must belong to the availability zone above'
+    Description: Existing subnet to use for this cluster. Must belong to the Availability Zone above.
     Type: AWS::EC2::Subnet::Id
 
   LoadBalancerSubnetId:
-    Description: 'The subnet to use for load balancing to kubernetes API server.  Must be a public subnet.  Leave blank to use the cluster subnet.'
+    Description: Existing subnet to use for load balancing HTTPS access to the Kubernetes API server.
+      Must be a public subnet. Must belong to the Availability Zone above.
     Type: AWS::EC2::Subnet::Id
 
   ClusterAssociation:
-    Description: 'A string, unique within your AWS account, to associate resources in this kubernetes cluster.  Leave blank to use this Quick Start Stack Name'
+    Description: Enter a string, unique within your AWS account, to associate resources in
+     this Kubernetes cluster with each other. This adds a tag, with the key KubernetesCluster
+     and the value of this parameter, to resources created as part of this stack. Leave blank
+     to use this Quick Start Stack name.
     Type: String
 
   # Default is t2.medium. EC2 instance type for the cluster
   # https://aws.amazon.com/ec2/instance-types/
   InstanceType:
-    Description: EC2 instance type for the cluster
+    Description: EC2 instance type for the cluster.
     Type: String
     Default: t2.medium
     AllowedValues:
@@ -159,15 +167,16 @@ Parameters:
   # Required. This is an availability zone from your region
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   AvailabilityZone:
-    Description: The Availability Zone for this cluster.  Generally, Heptio recommends
-      that you run a cluster per AZ and use tooling to coordinate across AZs.
+    Description: The Availability Zone for this cluster. Heptio recommends
+      that you run one cluster per AZ and use tooling to coordinate across AZs.
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
 
   # Specifies the IP range from which you will have SSH access over port 22
   # Used in the allow22 SecurityGroup
   SSHLocation:
-    Description: IP address range that can be used to SSH to the EC2 instances
+    Description: CIDR block (IP address range) to allow SSH access to the 
+      instances. Use 0.0.0.0/0 to allow access from all locations.
     Type: String
     MinLength: '9'
     MaxLength: '18'
@@ -177,25 +186,26 @@ Parameters:
   # Specifies the IP range from which you will have HTTPS access to the Kubernetes API server load balancer
   # Used in the ApiLoadBalancerSecGroup SecurityGroup
   ApiLbLocation:
-    Description: IP address range that can be used to access the API over HTTPs
+    Description: CIDR block (IP address range) to allow HTTPS access to
+      the Kubernetes API. Use 0.0.0.0/0 to allow access from all locations.
     Type: String
     MinLength: '9'
     MaxLength: '18'
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
-  # Default 2. Choose 1-3 initial nodes to run cluster workloads (in addition to the master node instance)
+  # Default 2. Choose 1-20 initial nodes to run cluster workloads (in addition to the master node instance)
   # You can scale up your cluster later and add more nodes
   K8sNodeCapacity:
     Default: '2'
-    Description: Initial number of nodes
+    Description: Initial number of Kubernetes nodes (1-20).
     Type: Number
     MinValue: '1'
     MaxValue: '20'
-    ConstraintDescription: must be between 1 and 3 EC2 instances.
+    ConstraintDescription: must be between 1 and 20 EC2 instances.
 
-  # S3 Bucket configuration: For hosting our own downstream copy of calico
-  # configuration and potentially other things.
+  # S3 Bucket configuration: allows users to use their own downstream snapshots
+  # of the quickstart-aws-vpc and quickstart-linux-bastion templates
   QSS3BucketName:
     AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
@@ -204,7 +214,11 @@ Parameters:
     # TODO: quickstart-reference is where this will eventually go, for now we
     # will override during testing.
     Default: heptio-aws-quickstart-test
-    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
+    Description: Only change this if you have set up assets, like your own networking
+      configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
+      scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
+      Quick Start assets, uploaded to S3 and stored at
+      ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
@@ -215,10 +229,10 @@ Parameters:
       uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
       with forward slash (/) because they are automatically appended.
     Default: heptio/kubernetes/latest
-    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
-      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
-      forward slash (/). It cannot start or end with forward slash (/) because they
-      are automatically appended.
+    Description: Only change this if you have set up assets in an S3 bucket, as explained
+      in the S3 Bucket parameter. The S3 key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slashes (/). It cannot start or end with
+      forward slashes (/) because they are automatically appended.
     Type: String
 
   NetworkingProvider:
@@ -227,9 +241,10 @@ Parameters:
     - weave
     ConstraintDescription: 'Currently supported values are "calico" and "weave"'
     Default: calico
-    Description: Which networking provider to use for communication between
-      pods in the kubernetes cluster.  Supported configurations are calico and
-      weave.
+    Description: Choose the networking provider to use for communication between
+      pods in the Kubernetes cluster. Supported configurations are calico 
+      (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
+      and weave (https://github.com/weaveworks-experiments/weave-kube).
     Type: String
 
 # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
@@ -305,12 +320,12 @@ Resources:
               context:
                 StackName: !Ref AWS::StackName
 
-            # Installation script for the cloudwatch agent
+            # Installation script for the Cloudwatch agent
             "/usr/local/aws/awslogs-agent-setup.py":
               source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
               mode: '000755'
 
-            # systemd init script for the cloudwatch logs agent
+            # systemd init script for the Cloudwatch logs agent
             "/etc/systemd/system/awslogs.service":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
 
@@ -327,10 +342,10 @@ Resources:
                 Region: !Ref AWS::Region
 
           commands:
-            # Install the cloudwatch agent with configuration for the current region and log group name
+            # Install the Cloudwatch agent with configuration for the current region and log group name
             "01-cloudwatch-agent-setup":
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
-            # Enable the cloudwatch service and launch it
+            # Enable the Cloudwatch service and launch it
             "02-cloudwatch-service-config":
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
 
@@ -352,13 +367,14 @@ Resources:
       - DeleteOnTermination: true
         DeviceIndex: 0
         SubnetId: !Ref ClusterSubnetId
-        # Joins two security groups: A default group for cluster communication, and the new allow22 group
-        # The default group allows all instances in the same stack to communicate internally
-        # The allow22 group allows external communication on port 22 from a chosen CIDR range
+        # Joins the ClusterSecGroup Security Group for cluster communication and SSH access
+        # The ClusterSecGroupCrossTalk rules allow all instances in the same stack to communicate internally
+        # The ClusterSecGroupAllow22 rules allow external communication on port 22 from a chosen CIDR range
+        # The ClusterSecGroupAllow6443FromLB rules allow HTTPS access to the load balancer on port 6443
         GroupSet:
         - !Ref ClusterSecGroup
       # Designates a name for this EC2 instance that will appear in the instances list (k8s-master)
-      # Tags it with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
+      # Tags it with KubernetesCluster=<stackname> or chosen value (needed for cloud-provider's IAM roles)
       Tags:
       - Key: Name
         Value: k8s-master
@@ -495,18 +511,18 @@ Resources:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZones:
       - !Ref AvailabilityZone
-      # Refers to the K8sNodeCapacity parameter, which specifies the number of nodes (1-3)
+      # Refers to the K8sNodeCapacity parameter, which specifies the number of nodes (1-20)
       DesiredCapacity: !Ref K8sNodeCapacity
       # Refers to the LaunchConfig, which has specific config details for the EC2 instances
       LaunchConfigurationName: !Ref LaunchConfig
       # More cluster sizing
       MinSize: '1'
-      MaxSize: '3'
+      MaxSize: !Ref K8sNodeCapacity
       # VPC Zone Identifier is the subnets to put the hosts in
       VPCZoneIdentifier:
         - !Ref ClusterSubnetId
       # Designates names for these EC2 instances that will appear in the instances list (k8s-node)
-      # Tags each node with KubernetesCluster=<stackname> (needed for cloud-provider's IAM roles)
+      # Tags each node with KubernetesCluster=<stackname> or chosen value (needed for cloud-provider's IAM roles)
       Tags:
       - Key: Name
         Value: k8s-node
@@ -758,7 +774,7 @@ Resources:
       Roles:
       - !Ref MasterRole
 
-  # Create a placeholder load balancer for the API server.  Backend instances will be added by the master itself on the
+  # Create a placeholder load balancer for the API server. Backend instances will be added by the master itself on the
   # first boot in the startup script above.
   ApiLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
@@ -807,22 +823,22 @@ Resources:
 # Read Descriptions below for more detail
 Outputs:
   MasterInstanceId:
-    Description: InstanceId of the master EC2 instance
+    Description: InstanceId of the master EC2 instance.
     Value: !Ref K8sMasterInstance
 
   MasterPrivateIp:
-    Description: Private IP address of the master
+    Description: Private IP address of the master.
     Value: !GetAtt K8sMasterInstance.PrivateIp
 
   NodeGroupInstanceId:
-    Description: InstanceId of the newly created NodeGroup
+    Description: InstanceId of the newly-created NodeGroup.
     Value: !Ref K8sNodeGroup
 
   JoinNodes:
-    Description: Command to run on node to join it to this cluster
+    Description: Command to join more nodes to this cluster.
     Value: !Sub "kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}"
 
   NextSteps:
-    Description: Verify your cluster and deploy a test application. Instructions at
+    Description: Verify your cluster and deploy a test application. Instructions -
       http://jump.heptio.com/aws-qs-next
     Value: http://jump.heptio.com/aws-qs-next

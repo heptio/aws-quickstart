@@ -67,7 +67,7 @@ Metadata:
       NetworkingProvider:
         default: Networking Provider
 
-# The Parameters allow custom configuration of the stack
+# The Parameters allow the user to pass custom settings to the stack before creation
 Parameters:
   KeyName:
     Description: Existing EC2 KeyPair for SSH access.
@@ -184,7 +184,7 @@ Parameters:
 
   K8sNodeCapacity:
     Default: '2'
-    Description: Initial number of Kubernetes nodes.
+    Description: Initial number of Kubernetes nodes (1-20).
     Type: Number
     MinValue: '1'
     MaxValue: '20'
@@ -208,6 +208,7 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
+  
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
