@@ -471,7 +471,7 @@ Outputs:
     Description: ID of the newly-created EC2 VPC
     Value: !Ref VPC
 
-  BastionHostPublicIP:
+  BastionHostPublicIp:
     Description: IP Address of the bastion host for the newly-created EC2 VPC
     Value: !GetAtt BastionHost.PublicIp
 
@@ -481,20 +481,26 @@ Outputs:
 
   SSHProxyCommand:
     Description: SSH Command to run to proxy to the master instance through the bastion host to access port 8080
-    Value: !Sub "ssh -A -L8080:localhost:8080 -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIP} 22' ubuntu@${K8sStack.Outputs.MasterPrivateIP}"
+    Value: !Sub >-
+      ssh -A -L8080:localhost:8080
+      -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIp} 22'
+      ubuntu@${K8sStack.Outputs.MasterPrivateIp}
 
   GetKubeConfigCommand:
     Description: SCP command to grab the configuration file for accessing the new cluster.
-    Value: !Sub "scp -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIP} 22' ubuntu@${K8sStack.Outputs.MasterPrivateIP}:~/kubeconfig ~/kubeconfig"
+    Value: !Sub >-
+      scp
+      -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIp} 22'
+      ubuntu@${K8sStack.Outputs.MasterPrivateIp}:~/kubeconfig kubeconfig
 
   # Outputs forwarded from the k8s template
   MasterInstanceId:
     Description: InstanceId of the master EC2 instance
     Value: !GetAtt K8sStack.Outputs.MasterInstanceId
 
-  MasterPrivateIP:
+  MasterPrivateIp:
     Description: Private IP address of the master
-    Value: !GetAtt K8sStack.Outputs.MasterPrivateIP
+    Value: !GetAtt K8sStack.Outputs.MasterPrivateIp
 
   NodeGroupInstanceId:
     Description: InstanceId of the newly created NodeGroup
