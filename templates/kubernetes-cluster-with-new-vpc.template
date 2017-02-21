@@ -14,40 +14,36 @@
 
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-# TODO: update this description to describe that we're creating a new VPC
-Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes cluster.
-  The master node is an auto-recovering Amazon EC2 instance. Two more EC2
-  instances in an AutoScalingGroup join the Kubernetes cluster as nodes. The
-  AMI is chosen based on the region in which the stack is run. This example
-  creates an EC2 security group for all instances to give you SSH access. Next
-  steps: http://jump.heptio.com/aws-qs-next **WARNING** This template creates
-  three Amazon EC2 instances. You will be billed for the AWS resources used if
-  you create a stack from this template. **CREDIT** This template is provided
-  courtesy of Heptio (https://www.heptio.com/), by Joe Beda and Sharon
-  Campbell.'
+Description: 'Kubernetes AWS CloudFormation Template: Create a Kubernetes
+  cluster in a new VPC. The master node is an auto-recovering Amazon EC2
+  instance. 1-20 additional EC2 instances in an AutoScalingGroup join the
+  Kubernetes cluster as nodes. An ELB provides configurable external access
+  to the Kubernetes API. The new VPC includes a bastion host to grant
+  SSH access to the private subnet for the cluster. This template creates
+  two stacks: one for the new VPC and one for the cluster. The stack is
+  suitable for development and small single-team clusters. **WARNING** This
+  template creates four Amazon EC2 instances with default settings. You will
+  be billed for the AWS resources used if you create a stack from this template.
+  **SUPPORT** Please visit http://jump.heptio.com/aws-qs-help for support.
+  **NEXT STEPS** Please visit http://jump.heptio.com/aws-qs-next.'
 
+# The Metadata tells AWS how to display the parameters during stack creation
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: Amazon EC2 Configuration
+        default: Required
       Parameters:
       - AvailabilityZone
-      - InstanceType
-      - BastionInstanceType
-    - Label:
-        default: Access Configuration
-      Parameters:
       - AdminIngressLocation
       - KeyName
     - Label:
-        default: Kubernetes Configuration
-      Parameters:
-      - K8sNodeCapacity
-      - NetworkingProvider
-    - Label:
         default: Advanced
       Parameters:
+      - NetworkingProvider
+      - K8sNodeCapacity
+      - InstanceType
+      - BastionInstanceType
       - QSS3BucketName
       - QSS3KeyPrefix
 
@@ -71,14 +67,15 @@ Metadata:
       NetworkingProvider:
         default: Networking Provider
 
+# The Parameters allow custom configuration of the stack
 Parameters:
   KeyName:
-    Description: Existing EC2 KeyPair for SSH access
+    Description: Existing EC2 KeyPair for SSH access.
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
 
   InstanceType:
-    Description: EC2 instance type for the cluster
+    Description: EC2 instance type for the cluster.
     Type: String
     Default: t2.medium
     AllowedValues:
@@ -124,7 +121,7 @@ Parameters:
     ConstraintDescription: must be a valid EC2 instance type.
 
   BastionInstanceType:
-    Description: EC2 instance type for the bastion host (used for public SSH access)
+    Description: EC2 instance type for the bastion host (used for public SSH access).
     Type: String
     Default: t2.micro
     AllowedValues:
@@ -170,13 +167,15 @@ Parameters:
     ConstraintDescription: must be a valid EC2 instance type.
 
   AvailabilityZone:
-    Description: The Availability Zone for this cluster.  Generally, Heptio recommends
-      that you run a cluster per AZ and use tooling to coordinate across AZs.
+    Description: The Availability Zone for this cluster. Heptio recommends
+      that you run one cluster per AZ and use tooling to coordinate across AZs.
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
 
   AdminIngressLocation:
-    Description: IP address range that can be used to SSH to the Bastion Host and access the API over HTTPS
+    Description: CIDR block (IP address range) to allow SSH access to the 
+      Bastion Host and HTTPS access to the Kubernetes API. Use 0.0.0.0/0
+      to allow access from all locations.
     Type: String
     MinLength: '9'
     MaxLength: '18'
@@ -185,14 +184,14 @@ Parameters:
 
   K8sNodeCapacity:
     Default: '2'
-    Description: Initial number of nodes
+    Description: Initial number of Kubernetes nodes.
     Type: Number
     MinValue: '1'
     MaxValue: '20'
-    ConstraintDescription: must be between 1 and 3 EC2 instances.
+    ConstraintDescription: must be between 1 and 20 EC2 instances.
 
-  # S3 Bucket configuration: mainly to grab downstream snapshots of the
-  # quickstart-aws-vpc and quickstart-linux-bastion templates
+  # S3 Bucket configuration: allows users to use their own downstream snapshots
+  # of the quickstart-aws-vpc and quickstart-linux-bastion templates
   QSS3BucketName:
     AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
@@ -201,7 +200,11 @@ Parameters:
     # TODO: quickstart-reference is where this will eventually go, for now we
     # will override during testing.
     Default: heptio-aws-quickstart-test
-    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
+    Description: Only change this if you have set up assets, like your own networking
+      configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
+      scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
+      Quick Start assets, uploaded to S3 and stored at
+      ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
@@ -211,10 +214,10 @@ Parameters:
       uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
       with forward slash (/) because they are automatically appended.
     Default: heptio/kubernetes/latest
-    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
-      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
-      forward slash (/). It cannot start or end with forward slash (/) because they
-      are automatically appended.
+    Description: Only change this if you have set up assets in an S3 bucket, as explained
+      in the S3 Bucket parameter. The S3 key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slashes (/). It cannot start or end with
+      forward slashes (/) because they are automatically appended.
     Type: String
 
   NetworkingProvider:
@@ -223,9 +226,10 @@ Parameters:
     - weave
     ConstraintDescription: 'Currently supported values are "calico" and "weave"'
     Default: calico
-    Description: Which networking provider to use for communication between
-      pods in the kubernetes cluster.  Supported configurations are calico and
-      weave.
+    Description: Choose the networking provider to use for communication between
+      pods in the Kubernetes cluster. Supported configurations are calico 
+      (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
+      and weave (https://github.com/weaveworks-experiments/weave-kube).
     Type: String
 
 Mappings:
@@ -444,7 +448,10 @@ Resources:
         FromPort: '22'
         ToPort: '22'
         CidrIp: !Ref AdminIngressLocation
-
+  
+  # Call the cluster template and supply its parameters
+  # This creates a second stack that creates the actual Kubernetes cluster
+  # within the new VPC
   K8sStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -468,26 +475,31 @@ Resources:
 Outputs:
   # Outputs from VPC creation
   VPCID:
-    Description: ID of the newly-created EC2 VPC
+    Description: ID of the newly-created EC2 VPC.
     Value: !Ref VPC
 
   BastionHostPublicIp:
-    Description: IP Address of the bastion host for the newly-created EC2 VPC
+    Description: IP Address of the bastion host for the newly-created EC2 VPC.
     Value: !GetAtt BastionHost.PublicIp
 
   BastionHostPublicDNS:
-    Description: DNS FQDN of the bastion host for the newly-created EC2 VPC
+    Description: Public DNS FQDN of the bastion host for the newly-created EC2 VPC.
     Value: !GetAtt BastionHost.PublicDnsName
 
   SSHProxyCommand:
-    Description: SSH Command to run to proxy to the master instance through the bastion host to access port 8080
+    Description: Run locally - SSH command to proxy to the master instance
+      through the bastion host, to access port 8080 (command to SSH to the master Kubernetes node).
     Value: !Sub >-
       ssh -A -L8080:localhost:8080
       -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIp} 22'
       ubuntu@${K8sStack.Outputs.MasterPrivateIp}
 
   GetKubeConfigCommand:
-    Description: SCP command to grab the configuration file for accessing the new cluster.
+    Description: Run locally - SCP command to download the Kubernetes configuration
+      file for accessing the new cluster via kubectl, a Kubernetes command line tool.
+      Creates a "kubeconfig" file in the current directory. Then, you can run
+      "export KUBECONFIG=./kubeconfig" to ensure kubectl uses this configuration file.
+      About kubectl - https://kubernetes.io/docs/user-guide/prereqs/ 
     Value: !Sub >-
       scp
       -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIp} 22'
@@ -495,22 +507,22 @@ Outputs:
 
   # Outputs forwarded from the k8s template
   MasterInstanceId:
-    Description: InstanceId of the master EC2 instance
+    Description: InstanceId of the master EC2 instance.
     Value: !GetAtt K8sStack.Outputs.MasterInstanceId
 
   MasterPrivateIp:
-    Description: Private IP address of the master
+    Description: Private IP address of the master.
     Value: !GetAtt K8sStack.Outputs.MasterPrivateIp
 
   NodeGroupInstanceId:
-    Description: InstanceId of the newly created NodeGroup
+    Description: InstanceId of the newly-created NodeGroup.
     Value: !GetAtt K8sStack.Outputs.NodeGroupInstanceId
 
   JoinNodes:
-    Description: Command to join more nodes to this cluster
+    Description: Command to join more nodes to this cluster.
     Value: !GetAtt K8sStack.Outputs.JoinNodes
 
   NextSteps:
-    Description: Verify your cluster and deploy a test application. Instructions at
+    Description: Verify your cluster and deploy a test application. Instructions -
       http://jump.heptio.com/aws-qs-next
     Value: !GetAtt K8sStack.Outputs.NextSteps
