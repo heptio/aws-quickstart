@@ -174,7 +174,7 @@ Parameters:
 
   AdminIngressLocation:
     Description: CIDR block (IP address range) to allow SSH access to the 
-      Bastion Host and HTTPS access to the Kubernetes API. Use 0.0.0.0/0
+      bastion host and HTTPS access to the Kubernetes API. Use 0.0.0.0/0
       to allow access from all locations.
     Type: String
     MinLength: '9'
@@ -499,7 +499,7 @@ Outputs:
     Description: Run locally - SCP command to download the Kubernetes configuration
       file for accessing the new cluster via kubectl, a Kubernetes command line tool.
       Creates a "kubeconfig" file in the current directory. Then, you can run
-      "export KUBECONFIG=./kubeconfig" to ensure kubectl uses this configuration file.
+      "export KUBECONFIG=$(pwd)/kubeconfig" to ensure kubectl uses this configuration file.
       About kubectl - https://kubernetes.io/docs/user-guide/prereqs/ 
     Value: !Sub >-
       scp
