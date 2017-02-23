@@ -30,6 +30,7 @@ cat <<EOF > /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
 Environment="KUBELET_EXTRA_ARGS=--cloud-provider=aws"
 EOF
 
+## TODO: Update docker to use overlay2 by default 
 apt-get update -q
 apt-get upgrade -qy
 apt-get install -qy \
@@ -47,6 +48,8 @@ pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-
 pip install awscli
 
 ## Pre-fetch various images, so that `kubeadm init` is a bit quicker
+## TODO: pre-fetch add-ons that are layed down by kubeadm. 
+## Also, address logging and metrics
 images=(
   "gcr.io/google_containers/kube-proxy-amd64:${kubernetes_release_tag}"
   "gcr.io/google_containers/kube-apiserver-amd64:${kubernetes_release_tag}"
