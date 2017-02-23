@@ -38,6 +38,7 @@ Metadata:
       - VPCID
       - AvailabilityZone
       - InstanceType
+      - DiskSizeGb
       - ClusterSubnetId
       - LoadBalancerSubnetId      
     - Label:
@@ -73,6 +74,8 @@ Metadata:
         default: API Ingress Location
       InstanceType:
         default: Instance Type
+      DiskSizeGb:
+        default: Disk Size (GiB)
       K8sNodeCapacity:
         default: Node Capacity
       QSS3BucketName:
@@ -163,6 +166,15 @@ Parameters:
     - d2.4xlarge
     - d2.8xlarge
     ConstraintDescription: must be a valid EC2 instance type.
+
+  # Specifies the size of the root disk for all EC2 instances, including master
+  # and nodes.
+  DiskSizeGb:
+    Description: 'Size of the root disk for the EC2 instances, in GiB.  Default: 40'
+    Default: 40
+    Type: Number
+    MinValue: 8
+    MaxValue: 1024
 
   # Required. This is an availability zone from your region
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
@@ -390,6 +402,11 @@ Resources:
         - RegionMap
         - !Ref AWS::Region
         - '64'
+      BlockDeviceMappings:
+      - DeviceName: '/dev/sda1'
+        Ebs:
+          VolumeSize: !Ref DiskSizeGb
+          VolumeType: gp2
       # The userdata script is launched on startup, but contains only the commands that call out to cfn-init, which runs
       # the commands in the metadata above, and cfn-signal, which signals when the initialization is complete.
       UserData:
@@ -579,6 +596,11 @@ Resources:
         - RegionMap
         - !Ref AWS::Region
         - '64'
+      BlockDeviceMappings:
+      - DeviceName: '/dev/sda1'
+        Ebs:
+          VolumeSize: !Ref DiskSizeGb
+          VolumeType: gp2
       # Type of instance; the default is t2.medium
       InstanceType: !Ref InstanceType
       # Adds our SSH key to the instance

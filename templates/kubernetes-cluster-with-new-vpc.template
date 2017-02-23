@@ -43,6 +43,7 @@ Metadata:
       - NetworkingProvider
       - K8sNodeCapacity
       - InstanceType
+      - DiskSizeGb
       - BastionInstanceType
       - QSS3BucketName
       - QSS3KeyPrefix
@@ -56,6 +57,8 @@ Metadata:
         default: Admin Ingress Location
       InstanceType:
         default: Instance Type
+      DiskSizeGb:
+        default: Disk Size (GiB)
       BastionInstanceType:
         default: Instance Type (Bastion Host)
       K8sNodeCapacity:
@@ -119,6 +122,15 @@ Parameters:
     - d2.4xlarge
     - d2.8xlarge
     ConstraintDescription: must be a valid EC2 instance type.
+
+  # Specifies the size of the root disk for all EC2 instances, including master
+  # and nodes.
+  DiskSizeGb:
+    Description: 'Size of the root disk for the EC2 instances, in GiB.  Default: 40'
+    Default: 40
+    Type: Number
+    MinValue: 8
+    MaxValue: 1024
 
   BastionInstanceType:
     Description: EC2 instance type for the bastion host (used for public SSH access).
@@ -461,6 +473,7 @@ Resources:
         VPCID: !Ref VPC
         AvailabilityZone: !Ref AvailabilityZone
         InstanceType: !Ref InstanceType
+        DiskSizeGb: !Ref DiskSizeGb
         ClusterSubnetId: !Ref PrivateSubnet
         # Direct SSH access only from the bastion host itself
         SSHLocation: !Sub "${BastionHost.PrivateIp}/32"
