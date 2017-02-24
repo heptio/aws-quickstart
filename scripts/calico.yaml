@@ -65,6 +65,7 @@ spec:
     metadata:
       labels:
         k8s-app: calico-etcd
+      # TODO: convert tolerations to Fields for 1.6 
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         scheduler.alpha.kubernetes.io/tolerations: |
@@ -72,6 +73,7 @@ spec:
            {"key":"CriticalAddonsOnly", "operator":"Exists"}]
     spec:
       # Only run this pod on the master.
+      # NOTE: There will be 2 different etcds running on the master.
       nodeSelector:
         kubeadm.alpha.kubernetes.io/role: master
       hostNetwork: true
