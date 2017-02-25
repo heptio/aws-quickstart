@@ -1,0 +1,15 @@
+[
+    {
+        "ParameterKey": "AvailabilityZone",
+        "ParameterValue": "$[alfred_genaz_1]"
+    },
+    {
+        "ParameterKey": "AdminIngressLocation",
+        "ParameterValue": "1.2.3.4/32"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "tonynv"
+    }
+
+]
