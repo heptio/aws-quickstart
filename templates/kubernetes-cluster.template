@@ -223,9 +223,8 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    # TODO: quickstart-reference is where this will eventually go, for now we
-    # will override during testing.
-    Default: heptio-aws-quickstart-test
+    
+    Default: quickstart-reference
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
       scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
