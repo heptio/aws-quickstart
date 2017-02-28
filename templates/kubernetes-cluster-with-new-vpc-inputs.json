@@ -10,6 +10,14 @@
     {
         "ParameterKey": "KeyName",
         "ParameterValue": "tonynv"
+    },
+    {
+        "ParameterKey": "QSS3BucketName",
+        "ParameterValue": "heptio-aws-quickstart-test"
+    },
+    {
+        "ParameterKey": "QSS3KeyPrefix",
+        "ParameterValue": "heptio/kubernetes/latest"
     }
 
 ]
