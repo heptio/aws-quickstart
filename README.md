@@ -1,6 +1,14 @@
+![AWS Quick Start for Kubernets](images/banner.jpg)
+
 # Heptio AWS Quickstart
 
-Work-in-progress AWS quickstart for kubernetes
+These are the CloudFormation templates and Packer configs for the Heptio AWS Quick Start.  This is where active development is happening.
+
+Details of the Quick Start are in this [Heptio Blog post](https://blog.heptio.com/aws-quickstart-for-kubernetes-26ccaf7e1c8f#.aqb0bit5l)
+
+Amazon's page for this is [here](https://aws.amazon.com/quickstart/architecture/heptio-kubernetes/).
+
+This will be updated and pushed regularly to https://github.com/aws-quickstart/quickstart-heptio.
 
 ## Deploying
 
