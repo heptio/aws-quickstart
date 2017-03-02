@@ -63,8 +63,8 @@ images=(
   "calico/cni:v1.5.6"
   "calico/kube-policy-controller:v0.5.2"
   "calico/ctl:v1.0.2"
-  "weaveworks/weave-kube:1.9.0"
-  "weaveworks/weave-npc:1.9.0"
+  "weaveworks/weave-kube:1.9.2"
+  "weaveworks/weave-npc:1.9.2"
 )
 
 for i in "${images[@]}" ; do docker pull "${i}" ; done
