@@ -1,21 +1,28 @@
-# Building the AMI for Heptio's AWS Quick Start
+# Build the AMI for Heptio's AWS Quick Start
 
-This directory contains the builder scripts for the AWS AMI used by Heptio's AWS Quick Start.
+This directory contains the builder scripts for the AWS AMI that's used by Heptio's AWS Quick Start.
 
 Heptio's AMI is in turn built on Ubuntu 16.04 LTS.
 
-You can see what is being done in this AMI by looking at `prepare-ami.sh`, which installs kubernetes from apt.kubernetes.io, sets up docker, the AWS CLI, and CloudFormation bootstrap tools, among other things.
+## Overview
 
-## Requirements
+Look at `prepare-ami.sh` to see what the AMI does:
 
-For building the AMI, you'll need:
+- Installs Kubernetes from apt.kubernetes.io
+- Sets up Docker, the AWS CLI, and the CloudFormation bootstrap tools
+- Takes care of other requirements
+
+## Prerequisites
+
+To build the AMI, you need:
 
 - [Packer](https://www.packer.io/docs/installation.html)
-- An AWS Account and working AWS CLI
+- An AWS account
+- The AWS CLI installed and configured
 
-## Building the AMI
+## Build the AMI
 
-Just launch from the root of this repository:
+From the root of this repository, run:
 
 ```
 ./packer/create-ami.sh
@@ -23,7 +30,7 @@ Just launch from the root of this repository:
 
 ## Deployment
 
-`create-ami.sh` will publish the AMI to AWS in us-west-2 by default.  You can copy to other regions with:
+`create-ami.sh` publishes the AMI to AWS in us-west-2 by default.  You can copy to other regions with:
 
 ```
 # Copy AMI to new region
