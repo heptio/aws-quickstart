@@ -503,8 +503,11 @@ Outputs:
     Description: Run locally - SSH command to proxy to the master instance
       through the bastion host, to access port 8080 (command to SSH to the master Kubernetes node).
     Value: !Sub >-
-      ssh -A -L8080:localhost:8080
-      -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIp} 22'
+      SSH_KEY="path/to/${KeyName}.pem";
+      ssh
+      -i $SSH_KEY
+      -A -L8080:localhost:8080
+      -o ProxyCommand='ssh -i \"${!SSH_KEY}\" ubuntu@${BastionHost.PublicIp} nc %h %p'
       ubuntu@${K8sStack.Outputs.MasterPrivateIp}
 
   GetKubeConfigCommand:
@@ -514,9 +517,11 @@ Outputs:
       "export KUBECONFIG=$(pwd)/kubeconfig" to ensure kubectl uses this configuration file.
       About kubectl - https://kubernetes.io/docs/user-guide/prereqs/ 
     Value: !Sub >-
+      SSH_KEY="path/to/${KeyName}.pem";
       scp
-      -o ProxyCommand='ssh ubuntu@${BastionHost.PublicIp} nc ${K8sStack.Outputs.MasterPrivateIp} 22'
-      ubuntu@${K8sStack.Outputs.MasterPrivateIp}:~/kubeconfig kubeconfig
+      -i $SSH_KEY
+      -o ProxyCommand="ssh -i \"${!SSH_KEY}\" ubuntu@${BastionHost.PublicIp} nc %h %p"
+      ubuntu@${K8sStack.Outputs.MasterPrivateIp}:~/kubeconfig ./kubeconfig
 
   # Outputs forwarded from the k8s template
   MasterInstanceId:
