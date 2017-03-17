@@ -49,6 +49,18 @@ aws elb register-instances-with-load-balancer \
   --instances ${INSTANCE_ID} \
   --region {{Region}}
 
+# Check if we're configured with an elasticsearch proxy instance
+if [[ -n "{{EsProxyConfig}}" ]]; then
+  # Set up a proxy to the elasticsearch cluster
+  kubectl apply -f "{{EsProxyConfig}}"
+fi
+
+# Check if we're configured to set up fluentd to send logs to elasticsearch
+if [[ -n "{{FluentdConfigUrl}}" ]]; then
+  # Set up fluentd
+  kubectl apply -f "{{FluentdConfigUrl}}"
+fi
+
 # Grab the client config for the admin user and leave it in the user's home dir, but reconfigure it with
 # some sed magic.  What we're doing here:
 # - Replacing the server with the publicly-visible load balancer address

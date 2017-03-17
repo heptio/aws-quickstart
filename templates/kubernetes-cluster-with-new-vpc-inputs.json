@@ -18,6 +18,9 @@
     {
         "ParameterKey": "QSS3KeyPrefix",
         "ParameterValue": "heptio/kubernetes/latest"
+    },
+    {
+        "ParameterKey": "ElasticsearchDomainName",
+        "ParameterValue": "test"
     }
-
 ]
