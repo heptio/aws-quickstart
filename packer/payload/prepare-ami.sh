@@ -14,16 +14,28 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.5.4"
+KUBERNETES_RELEASE="v1.5.5"
 KUBEADM_RELEASE="v1.6.0-alpha.0.2074+a092d8e0f95f52"
 CNI_RELEASE="07a8a28637e97b22eb8dfe710eeae1344f69d16e"
+
+apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+echo "deb https://apt.dockerproject.org/repo ubuntu-$(lsb_release -cs) main" > /etc/apt/sources.list.d/docker.list
 
 ## Make sure we get the latest updates since the base image was released
 apt-get update -q
 apt-get upgrade -qy
 
 ## TODO: Update docker to use overlay2 by default
-apt-get install -qy docker.io jq python-pip python-setuptools ebtables socat ntp
+apt-get install -qy \
+    docker-engine=1.12.6-0~ubuntu-xenial \
+    jq \
+    python-pip \
+    python-setuptools \
+    ebtables \
+    socat \
+    ntp
+
+apt-mark hold docker-engine
 
 ## Install official Kubernetes binaries
 mkdir /tmp/kubebin
@@ -50,11 +62,12 @@ rm -rf /tmp/kubebin
 ## Install systemd scripts for kubelet
 sudo mkdir /etc/systemd/system/kubelet.service.d
 install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/kubelet.service" \
-  /lib/systemd/system/kubelet.service
+  /etc/systemd/system/kubelet.service
 install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/10-kubeadm.conf" \
   /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/20-cloud-provider.conf" \
   /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+systemctl daemon-reload
 systemctl enable kubelet
 
 ## We will need AWS tools as well
@@ -65,20 +78,23 @@ pip install awscli
 ## TODO: pre-fetch add-ons that are layed down by kubeadm.
 ## Also, address logging and metrics
 images=(
-  "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-apiserver-amd64:${KUBERNETES_RELEASE}"
-  "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-controller-manager-amd64:${KUBERNETES_RELEASE}"
+  "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
+  "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
+  "gcr.io/google_containers/dnsmasq-metrics-amd64:1.0"
   "gcr.io/google_containers/etcd-amd64:3.0.14-kubeadm"
-  "gcr.io/google_containers/kube-discovery-amd64:1.0"
-  "gcr.io/google_containers/pause-amd64:3.0"
   "gcr.io/google_containers/etcd:2.2.1"
-  "quay.io/calico/node:v1.0.2"
-  "calico/cni:v1.5.6"
-  "calico/kube-policy-controller:v0.5.2"
-  "calico/ctl:v1.0.2"
-  "weaveworks/weave-kube:1.9.2"
-  "weaveworks/weave-npc:1.9.2"
+  "gcr.io/google_containers/exechealthz-amd64:1.2"
+  "gcr.io/google_containers/kube-discovery-amd64:1.0"
+  "gcr.io/google_containers/kube-dnsmasq-amd64:1.4"
+  "gcr.io/google_containers/kubedns-amd64:1.9"
+  "gcr.io/google_containers/pause-amd64:3.0"
+  "quay.io/calico/cni:v1.6.1"
+  "quay.io/calico/kube-policy-controller:v0.5.4"
+  "quay.io/calico/node:v1.1.0"
+  "weaveworks/weave-kube:1.9.4"
+  "weaveworks/weave-npc:1.9.4"
 )
 
 for i in "${images[@]}" ; do docker pull "${i}" ; done
