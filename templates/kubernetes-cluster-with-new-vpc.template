@@ -507,7 +507,7 @@ Outputs:
       ssh
       -i $SSH_KEY
       -A -L8080:localhost:8080
-      -o ProxyCommand='ssh -i \"${!SSH_KEY}\" ubuntu@${BastionHost.PublicIp} nc %h %p'
+      -o ProxyCommand="ssh -i \"${!SSH_KEY}\" ubuntu@${BastionHost.PublicIp} nc %h %p"
       ubuntu@${K8sStack.Outputs.MasterPrivateIp}
 
   GetKubeConfigCommand:
