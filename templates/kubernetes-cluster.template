@@ -255,7 +255,7 @@ Parameters:
     Description: Choose the networking provider to use for communication between
       pods in the Kubernetes cluster. Supported configurations are calico 
       (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
-      and weave (https://github.com/weaveworks-experiments/weave-kube).
+      and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
     Type: String
 
 # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
@@ -263,34 +263,34 @@ Mappings:
 
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
-    ap-northeast-1:
-      '64': ami-1e094679
-    ap-northeast-2:
-      '64': ami-1fd20271
-    ap-south-1:
-      '64': ami-a4f584cb
-    ap-southeast-1:
-      '64': ami-ede5538e
-    ap-southeast-2:
-      '64': ami-4a444429
-    ca-central-1:
-      '64': ami-988934fc
-    eu-central-1:
-      '64': ami-161ed579
-    eu-west-1:
-      '64': ami-f0b99896
-    eu-west-2:
-      '64': ami-14091c70
-    sa-east-1:
-      '64': ami-35b1d659
-    us-east-1:
-      '64': ami-3825ec2e
     us-east-2:
-      '64': ami-5fc1e43a
+      '64': ami-e2082c87
+    ap-south-1:
+      '64': ami-102b587f
+    eu-west-2:
+      '64': ami-5f4e5a3b
+    eu-west-1:
+      '64': ami-c20b39a4
+    ap-northeast-2:
+      '64': ami-6a3dee04
+    ap-northeast-1:
+      '64': ami-3f87df58
+    sa-east-1:
+      '64': ami-3487e758
+    ca-central-1:
+      '64': ami-2e1fa24a
+    ap-southeast-1:
+      '64': ami-3500bd56
+    ap-southeast-2:
+      '64': ami-f6888495
+    eu-central-1:
+      '64': ami-27dd0c48
+    us-east-1:
+      '64': ami-dcfd40ca
     us-west-1:
-      '64': ami-492a7529
+      '64': ami-5d48133d
     us-west-2:
-      '64': ami-933abdf3
+      '64': ami-0462e864
 
 # Helper Conditions which help find the right values for resources
 Conditions:
@@ -806,6 +806,8 @@ Resources:
         InstancePort: 6443
         InstanceProtocol: TCP
         LoadBalancerPort: 443
+      ConnectionSettings:
+        IdleTimeout: 3600
       Subnets:
       - Fn::If:
         - LoadBalancerSubnetProvidedCondition
