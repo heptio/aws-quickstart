@@ -23,14 +23,14 @@
   "provisioners": [
     {
       "type": "file",
-      "source": "./prepare-ami.sh",
-      "destination": "/home/ubuntu/prepare-ami.sh"
+      "source": "./payload",
+      "destination": "/home/ubuntu"
     },
     {
       "type": "shell",
       "inline": [
-        "sudo /bin/bash -eux /home/ubuntu/prepare-ami.sh",
-        "rm /home/ubuntu/prepare-ami.sh"
+        "sudo /bin/bash -eux /home/ubuntu/payload/prepare-ami.sh",
+        "rm -rf /home/ubuntu/payload"
       ]
     }
   ]
