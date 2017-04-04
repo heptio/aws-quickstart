@@ -28,15 +28,31 @@ test -n "{{ClusterToken}}"
 test -n "{{NetworkingProviderUrl}}"
 test -n "{{Region}}"
 
+# kubeadm wants lowercase for DNS (as it probably should)
+LB_DNS=$(echo "{{LoadBalancerDns}}" | tr 'A-Z' 'a-z')
+
 # reset kubeadm (workaround for kubelet package presence)
 kubeadm reset
 
+cat >/tmp/kubeadm.yaml <<EOF
+---
+apiVersion: kubeadm.k8s.io/v1alpha1
+kind: MasterConfiguration
+token: {{ClusterToken}}
+cloudProvider: aws
+kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
+apiServerCertSANs:
+- ${LB_DNS}
+EOF
+
 # Initialize master node
-kubeadm init \
-  --cloud-provider=aws \
-  --token={{ClusterToken}} \
-  --api-external-dns-names={{LoadBalancerDns}} \
-  --use-kubernetes-version=$(cat /etc/kubernetes_community_ami_version)
+kubeadm init --config /tmp/kubeadm.yaml
+rm /tmp/kubeadm.yaml
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+# Grant the "admin" user complete access to the cluster
+kubectl create clusterrolebinding admin-cluster-binding --clusterrole=cluster-admin --user=admin
 
 # Add-on for networking providers, so pods can communicate.  see the scripts/
 # directory of the quickstart.  Currently either calico.yaml or weave.yaml
@@ -49,14 +65,12 @@ aws elb register-instances-with-load-balancer \
   --instances ${INSTANCE_ID} \
   --region {{Region}}
 
-# Grab the client config for the admin user and leave it in the user's home dir, but reconfigure it with
-# some sed magic.  What we're doing here:
-# - Replacing the server with the publicly-visible load balancer address
-# - Disabling TLS verification (since the hostname is random and not one of the SANs in the server cert)
-# - Omitting the CA data, since it's not allowed when you're disabling TLS verification
+# Use kubeadm's kubeconfig command to grab a client-cert-authenticated
+# kubeconfig file for administrative access to the cluster.
 KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
-cat /etc/kubernetes/admin.conf | \
-  sed "s#server: https://.*:6443#server: https://{{LoadBalancerDns}}#" \
+kubeadm alpha phase kubeconfig client-certs \
+  --client-name admin \
+  --server "https://${LB_DNS}" \
   >$KUBECONFIG_OUTPUT
 chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
