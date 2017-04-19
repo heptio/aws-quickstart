@@ -37,6 +37,7 @@ Metadata:
       - AvailabilityZone
       - AdminIngressLocation
       - KeyName
+      - ElasticsearchDomainName
     - Label:
         default: Advanced
       Parameters:
@@ -69,6 +70,8 @@ Metadata:
         default: S3 Key Prefix
       NetworkingProvider:
         default: Networking Provider
+      ElasticsearchDomainName:
+        default: Elasticsearch Domain
 
 # The Parameters allow the user to pass custom settings to the stack before creation
 Parameters:
@@ -185,7 +188,7 @@ Parameters:
     ConstraintDescription: must be the name of an AWS Availability Zone
 
   AdminIngressLocation:
-    Description: CIDR block (IP address range) to allow SSH access to the 
+    Description: CIDR block (IP address range) to allow SSH access to the
       bastion host and HTTPS access to the Kubernetes API. Use 0.0.0.0/0
       to allow access from all locations.
     Type: String
@@ -213,13 +216,13 @@ Parameters:
     Default: quickstart-reference
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
-      scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
+      scripts from the scripts/ and templates/ directories of your own fork of the Heptio
       Quick Start assets, uploaded to S3 and stored at
       ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
-  
+
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
@@ -239,9 +242,19 @@ Parameters:
     ConstraintDescription: 'Currently supported values are "calico" and "weave"'
     Default: calico
     Description: Choose the networking provider to use for communication between
-      pods in the Kubernetes cluster. Supported configurations are calico 
+      pods in the Kubernetes cluster. Supported configurations are calico
       (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
       and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
+    Type: String
+
+  ElasticsearchDomainName:
+    AllowedPattern: "^([0-9a-z]+([0-9a-z-]*[0-9a-z])*)?$"
+    ConstraintDescription: Elasticsearch domain name can include numbers, lowercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: ''
+    Description: Specify an Elasticsearch domain name for log storage and analysis for this Kubernetes cluster.  If set,
+      a new AWS Elasticsearch service will be created with this search domain configured as the default.  Leave blank if
+      you don't want an Elasticsearch cluster to be set up.
     Type: String
 
 Mappings:
@@ -460,7 +473,7 @@ Resources:
         FromPort: '22'
         ToPort: '22'
         CidrIp: !Ref AdminIngressLocation
-  
+
   # Call the cluster template and supply its parameters
   # This creates a second stack that creates the actual Kubernetes cluster
   # within the new VPC
@@ -484,6 +497,7 @@ Resources:
         ClusterAssociation: !Ref AWS::StackName
         NetworkingProvider: !Ref NetworkingProvider
         LoadBalancerSubnetId: !Ref PublicSubnet
+        ElasticsearchDomainName: !Ref ElasticsearchDomainName
 
 Outputs:
   # Outputs from VPC creation
@@ -515,7 +529,7 @@ Outputs:
       file for accessing the new cluster via kubectl, a Kubernetes command line tool.
       Creates a "kubeconfig" file in the current directory. Then, you can run
       "export KUBECONFIG=$(pwd)/kubeconfig" to ensure kubectl uses this configuration file.
-      About kubectl - https://kubernetes.io/docs/user-guide/prereqs/ 
+      About kubectl - https://kubernetes.io/docs/user-guide/prereqs/
     Value: !Sub >-
       SSH_KEY="path/to/${KeyName}.pem";
       scp

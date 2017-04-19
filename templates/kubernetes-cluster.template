@@ -40,7 +40,8 @@ Metadata:
       - InstanceType
       - DiskSizeGb
       - ClusterSubnetId
-      - LoadBalancerSubnetId      
+      - LoadBalancerSubnetId
+      - ElasticsearchDomainName
     - Label:
         default: Access Configuration
       Parameters:
@@ -88,6 +89,8 @@ Metadata:
         default: Networking Provider
       LoadBalancerSubnetId:
         default: Load Balancer Subnet
+      ElasticsearchDomainName:
+        default: Elasticsearch Domain
 
 
 # The Parameters allow the user to pass custom settings to the stack before creation
@@ -187,7 +190,7 @@ Parameters:
   # Specifies the IP range from which you will have SSH access over port 22
   # Used in the allow22 SecurityGroup
   SSHLocation:
-    Description: CIDR block (IP address range) to allow SSH access to the 
+    Description: CIDR block (IP address range) to allow SSH access to the
       instances. Use 0.0.0.0/0 to allow access from all locations.
     Type: String
     MinLength: '9'
@@ -223,11 +226,11 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    
+
     Default: quickstart-reference
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
-      scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
+      scripts from the scripts/ and templates/ directories of your own fork of the Heptio
       Quick Start assets, uploaded to S3 and stored at
       ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
@@ -253,9 +256,19 @@ Parameters:
     ConstraintDescription: 'Currently supported values are "calico" and "weave"'
     Default: calico
     Description: Choose the networking provider to use for communication between
-      pods in the Kubernetes cluster. Supported configurations are calico 
+      pods in the Kubernetes cluster. Supported configurations are calico
       (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
       and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
+    Type: String
+
+  ElasticsearchDomainName:
+    AllowedPattern: "^([0-9a-z]+([0-9a-z-]*[0-9a-z])*)?$"
+    ConstraintDescription: Elasticsearch domain name can include numbers, lowercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: ''
+    Description: Specify an Elasticsearch domain name for log storage and analysis for this Kubernetes cluster.  If set,
+      a new AWS Elasticsearch service will be created with this search domain configured as the default.  Leave blank if
+      you don't want an Elasticsearch cluster to be set up.
     Type: String
 
 # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
@@ -304,6 +317,11 @@ Conditions:
     - Fn::Equals:
       - !Ref LoadBalancerSubnetId
       - ''
+  ElasticsearchDomainCondition:
+    Fn::Not:
+    - Fn::Equals:
+      - !Ref ElasticsearchDomainName
+      - ''
 
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
@@ -313,6 +331,34 @@ Resources:
     Properties:
       LogGroupName: !Ref AWS::StackName
       RetentionInDays: 14
+
+  # Set up an ElasticSearch domain for k8s/app logs
+  ElasticsearchDomain:
+    Type: AWS::Elasticsearch::Domain
+    Condition: ElasticsearchDomainCondition
+    Properties:
+      DomainName: !Ref ElasticsearchDomainName
+      ElasticsearchClusterConfig:
+        DedicatedMasterEnabled: false
+        InstanceCount: 1
+        ZoneAwarenessEnabled: false
+        InstanceType: t2.small.elasticsearch
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 10
+        VolumeType: gp2
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: 0
+      AccessPolicies:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            AWS:
+            - !Sub "arn:aws:iam::${AWS::AccountId}:role/${NodeRole}"
+            - !Sub "arn:aws:iam::${AWS::AccountId}:role/${MasterRole}"
+          Action: "es:*"
+          Resource: !Sub "arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${ElasticsearchDomainName}/*"
 
   # This is an EC2 instance that will serve as our master node
   K8sMasterInstance:
@@ -351,6 +397,28 @@ Resources:
                 ClusterToken: !GetAtt KubeadmToken.Token
                 NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
                 Region: !Ref AWS::Region
+                EsProxyConfig:
+                  Fn::If:
+                  - ElasticsearchDomainCondition
+                  - !Sub
+                    "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/fluentd-daemonset-elasticsearch.yaml"
+                  - ''
+                FluentdConfigUrl:
+                  Fn::If:
+                  - ElasticsearchDomainCondition
+                  - '/tmp/aws-es-proxy.yaml'
+                  - ''
+
+            "/tmp/aws-es-proxy.yaml":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/aws-es-proxy.yaml.in"
+              mode: '000644'
+              context:
+                AwsRegion: !Ref AWS::Region
+                ElasticsearchFqdn:
+                  Fn::If:
+                  - ElasticsearchDomainCondition
+                  - !GetAtt ElasticsearchDomain.DomainEndpoint
+                  - ''
 
           commands:
             # Install the Cloudwatch agent with configuration for the current region and log group name

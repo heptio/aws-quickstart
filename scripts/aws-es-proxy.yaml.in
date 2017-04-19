@@ -1,0 +1,49 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: aws-es-proxy
+  labels:
+    run: aws-es-proxy
+  namespace: kube-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: aws-es-proxy
+  strategy:
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: aws-es-proxy
+    spec:
+      containers:
+      - args:
+        - -target
+        - http://{{ElasticsearchFqdn}}
+        - -region
+        - {{AwsRegion}}
+        image: cllunsford/aws-signing-proxy
+        imagePullPolicy: Always
+        name: aws-es-proxy
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: aws-es-proxy
+  name: elasticsearch-logging
+  namespace: kube-system
+spec:
+  ports:
+  - port: 9200
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    run: aws-es-proxy
+  type: ClusterIP
