@@ -14,8 +14,8 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.6.1"
-KUBEADM_RELEASE="v1.6.1"
+KUBERNETES_RELEASE="v1.6.2"
+KUBEADM_RELEASE="v1.6.2"
 CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
 
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
