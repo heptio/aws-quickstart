@@ -14,9 +14,9 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.5.5"
-KUBEADM_RELEASE="v1.6.0-alpha.0.2074+a092d8e0f95f52"
-CNI_RELEASE="07a8a28637e97b22eb8dfe710eeae1344f69d16e"
+KUBERNETES_RELEASE="v1.6.1"
+KUBEADM_RELEASE="v1.6.1"
+CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
 
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
 echo "deb https://apt.dockerproject.org/repo ubuntu-$(lsb_release -cs) main" > /etc/apt/sources.list.d/docker.list
@@ -43,7 +43,7 @@ mkdir /tmp/kubebin
   cd /tmp/kubebin
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubelet"
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubectl"
-  curl -sf -O "https://storage.googleapis.com/kubernetes-release-dev/ci-cross/${KUBEADM_RELEASE}/bin/linux/amd64/kubeadm"
+  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_RELEASE}/bin/linux/amd64/kubeadm"
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/network-plugins/cni-amd64-${CNI_RELEASE}.tar.gz"
 
   install -o root -g root -m 0755 ./kubeadm /usr/bin/kubeadm
@@ -75,17 +75,19 @@ pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-
 pip install awscli
 
 ## Pre-fetch various images, so that `kubeadm init` is a bit quicker
-## TODO: pre-fetch add-ons that are layed down by kubeadm.
-## Also, address logging and metrics
+## TODO: address logging and metrics
 images=(
   "gcr.io/google_containers/kube-apiserver-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-controller-manager-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/dnsmasq-metrics-amd64:1.0"
-  "gcr.io/google_containers/etcd-amd64:3.0.14-kubeadm"
+  "gcr.io/google_containers/etcd-amd64:3.0.17"
   "gcr.io/google_containers/etcd:2.2.1"
   "gcr.io/google_containers/exechealthz-amd64:1.2"
+  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.1"
+  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.1"
+  "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.1"
   "gcr.io/google_containers/kube-discovery-amd64:1.0"
   "gcr.io/google_containers/kube-dnsmasq-amd64:1.4"
   "gcr.io/google_containers/kubedns-amd64:1.9"
