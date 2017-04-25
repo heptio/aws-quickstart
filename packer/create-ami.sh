@@ -18,7 +18,12 @@
 
 set -eu
 
-AWS_BUILDS=('us-east-2,ami-cc7551a9')
+# The base AMI we build from is ubuntu Xenial in us-west-1 (see:
+# https://cloud-images.ubuntu.com/locator/).  This can be revved occasionally,
+# since ubuntu releases updated AMI's regularly, but it's not strictly
+# necessary because running `apt-get upgrade` in our packer script accomplishes
+# the same thing.
+AWS_BUILDS=('us-west-1,ami-44613824')
 
 ORIG_DIR=`pwd`
 SCRIPT_DIR="$(cd "$(dirname "$0")"; pwd)"

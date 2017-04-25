@@ -1,5 +1,5 @@
 ### Downloaded and re-hosted with permission from
-### http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/calico.yaml
+### http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 
 # This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
@@ -54,13 +54,13 @@ spec:
         k8s-app: calico-etcd
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: |
-          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
-           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
     spec:
       # Only run this pod on the master.
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
       nodeSelector:
-        kubeadm.alpha.kubernetes.io/role: master
+        node-role.kubernetes.io/master: ""
       hostNetwork: true
       containers:
         - name: calico-etcd
@@ -123,11 +123,12 @@ spec:
         k8s-app: calico-node
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: |
-          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
-           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
     spec:
       hostNetwork: true
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      serviceAccountName: calico-cni-plugin
       containers:
         # Runs calico/node container on each Kubernetes node.  This
         # container programs network policy and routes on each
@@ -242,13 +243,14 @@ spec:
         k8s-app: calico-policy-controller
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: |
-          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
-           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
     spec:
       # The policy controller must run in the host network namespace so that
       # it isn't governed by policy that would prevent it from working.
       hostNetwork: true
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      serviceAccountName: calico-policy-controller
       containers:
         - name: calico-policy-controller
           image: quay.io/calico/kube-policy-controller:v0.5.4
@@ -268,3 +270,71 @@ spec:
             # kubernetes.default to the correct service clusterIP.
             - name: CONFIGURE_ETC_HOSTS
               value: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-cni-plugin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-cni-plugin
+subjects:
+- kind: ServiceAccount
+  name: calico-cni-plugin
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: calico-cni-plugin
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - nodes
+    verbs:
+      - get
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-cni-plugin
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-policy-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-policy-controller
+subjects:
+- kind: ServiceAccount
+  name: calico-policy-controller
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: calico-policy-controller
+  namespace: kube-system
+rules:
+  - apiGroups:
+    - ""
+    - extensions
+    resources:
+      - pods
+      - namespaces
+      - networkpolicies
+    verbs:
+      - watch
+      - list
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-policy-controller
+  namespace: kube-system
