@@ -1,6 +1,13 @@
 ### Downloaded and re-hosted with permission from
 ### http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 
+# Calico Version v2.1.5
+# http://docs.projectcalico.org/v2.1/releases#v2.1.5
+# This manifest includes the following component versions:
+#   calico/node:v1.1.3
+#   calico/cni:v1.8.0
+#   calico/kube-policy-controller:v0.5.4
+
 # This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
 apiVersion: v1
@@ -53,12 +60,19 @@ spec:
       labels:
         k8s-app: calico-etcd
       annotations:
+        # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
+        # reserves resources for critical add-on pods so that they can be rescheduled after
+        # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       # Only run this pod on the master.
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
+      # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
+      # This, along with the annotation above marks this pod as a critical add-on.
+      - key: CriticalAddonsOnly
+        operator: Exists
       nodeSelector:
         node-role.kubernetes.io/master: ""
       hostNetwork: true
@@ -122,19 +136,26 @@ spec:
       labels:
         k8s-app: calico-node
       annotations:
+        # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
+        # reserves resources for critical add-on pods so that they can be rescheduled after
+        # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       hostNetwork: true
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
+      # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
+      # This, along with the annotation above marks this pod as a critical add-on.
+      - key: CriticalAddonsOnly
+        operator: Exists
       serviceAccountName: calico-cni-plugin
       containers:
         # Runs calico/node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: quay.io/calico/node:v1.1.0
+          image: quay.io/calico/node:v1.1.3
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -183,7 +204,7 @@ spec:
         # This container installs the Calico CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: quay.io/calico/cni:v1.6.1
+          image: quay.io/calico/cni:v1.8.0
           command: ["/install-cni.sh"]
           env:
             # The location of the Calico etcd cluster.
@@ -242,6 +263,9 @@ spec:
       labels:
         k8s-app: calico-policy-controller
       annotations:
+        # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
+        # reserves resources for critical add-on pods so that they can be rescheduled after
+        # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       # The policy controller must run in the host network namespace so that
@@ -250,6 +274,10 @@ spec:
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
+      # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
+      # This, along with the annotation above marks this pod as a critical add-on.
+      - key: CriticalAddonsOnly
+        operator: Exists
       serviceAccountName: calico-policy-controller
       containers:
         - name: calico-policy-controller
