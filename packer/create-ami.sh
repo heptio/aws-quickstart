@@ -23,7 +23,7 @@ set -eu
 # since ubuntu releases updated AMI's regularly, but it's not strictly
 # necessary because running `apt-get upgrade` in our packer script accomplishes
 # the same thing.
-AWS_BUILDS=('us-west-1,ami-44613824')
+AWS_BUILDS=('us-west-1,ami-9fe6c7ff')
 
 ORIG_DIR=`pwd`
 SCRIPT_DIR="$(cd "$(dirname "$0")"; pwd)"
