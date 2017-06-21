@@ -17,8 +17,8 @@
     "ami_groups": "{{user `ami_groups`}}",
     "communicator": "ssh",
     "ssh_username": "ubuntu",
-    "subnet_id": "subnet-2b9f3171",
-    "vpc_id": "vpc-de490eba",
+    "subnet_id": "{{user `subnet_id`}}",
+    "vpc_id": "{{user `vpc_id`}}",
     "ssh_file_transfer_method": "sftp",
     "ssh_pty": true
   }],
