@@ -2,8 +2,8 @@
   "variables": {
     "aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
     "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
-    "aws_region": "us-west-2",
-    "aws_base_ami": "ami-746aba14",
+    "aws_region": "us-east-1",
+    "aws_base_ami": "ami-d6557ac0",
     "ami_groups": "all"
   },
   "builders": [{
@@ -13,10 +13,12 @@
     "region": "{{user `aws_region`}}",
     "source_ami": "{{user `aws_base_ami`}}",
     "instance_type": "t2.micro",
-    "ami_name": "Heptio Kubernetes Community AMI (Ubuntu 16.04 LTS {{isotime \"2006-01-02 15.04.05\"}})",
+    "ami_name": "Heptio K8s ITHAKA AMI (Ubuntu 16.04 LTS {{isotime \"2006-01-02 15.04.05\"}})",
     "ami_groups": "{{user `ami_groups`}}",
     "communicator": "ssh",
     "ssh_username": "ubuntu",
+    "subnet_id": "subnet-2b9f3171",
+    "vpc_id": "vpc-de490eba",
     "ssh_file_transfer_method": "sftp",
     "ssh_pty": true
   }],

@@ -23,7 +23,7 @@ set -eu
 # since ubuntu releases updated AMI's regularly, but it's not strictly
 # necessary because running `apt-get upgrade` in our packer script accomplishes
 # the same thing.
-AWS_BUILDS=('us-west-1,ami-9fe6c7ff')
+AWS_BUILDS=('us-east-1,ami-d15a75c7')
 
 ORIG_DIR=`pwd`
 SCRIPT_DIR="$(cd "$(dirname "$0")"; pwd)"
@@ -32,7 +32,8 @@ cd $SCRIPT_DIR
 # ------------------------------------------------------------
 
 # check 'packer' is present
-if [ ! `command -v packer` ]; then
+if [[ ! $(command -v packer) ]]
+then
   echo "'packer' is required but not found!"
   exit 1
 fi

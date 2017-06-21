@@ -33,6 +33,9 @@ apt-get install -qy \
     python-setuptools \
     ebtables \
     socat \
+    python3-pip \
+    openjdk-8-jre-headless \
+    python3-boto3 \
     ntp
 
 apt-mark hold docker-engine
