@@ -4,7 +4,9 @@
     "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
     "aws_region": "us-east-1",
     "aws_base_ami": "ami-d6557ac0",
-    "ami_groups": "all"
+    "ami_groups": "all",
+    "vpc_id": "{{env `VPC_ID`}}",
+    "subnet_id": "{{env `SUBNET_ID`}}"
   },
   "builders": [{
     "type": "amazon-ebs",

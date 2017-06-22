@@ -38,7 +38,7 @@ apt-get install -qy \
     python3-boto3 \
     ntp
 
-apt-mark hold docker-engine
+#apt-mark hold docker-engine
 
 ## Install official Kubernetes binaries
 mkdir /tmp/kubebin
