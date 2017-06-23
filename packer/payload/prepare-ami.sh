@@ -14,7 +14,7 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.6.4"
+KUBERNETES_RELEASE="v1.6.6"
 CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
 
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
@@ -75,29 +75,22 @@ pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-
 pip install awscli
 
 ## Pre-fetch various images, so that `kubeadm init` is a bit quicker
-## TODO: address logging and metrics
 images=(
+  "gcr.io/google_containers/etcd-amd64:3.0.17"
+  "gcr.io/google_containers/etcd:2.2.1"
+  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.2"
+  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.2"
+  "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.2"
   "gcr.io/google_containers/kube-apiserver-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-controller-manager-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
-  "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.1"
-  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.1"
-  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.1"
-  "gcr.io/google_containers/etcd-amd64:3.0.17"
   "gcr.io/google_containers/pause-amd64:3.0"
-  "gcr.io/google_containers/etcd:2.2.1"
-  "quay.io/calico/cni:v1.8.0"
-  "quay.io/calico/kube-policy-controller:v0.5.4"
-  "quay.io/calico/node:v1.1.3"
-  "weaveworks/weave-kube:1.9.5"
-  "weaveworks/weave-npc:1.9.5"
-
-  "gcr.io/google_containers/dnsmasq-metrics-amd64:1.0"
-  "gcr.io/google_containers/exechealthz-amd64:1.2"
-  "gcr.io/google_containers/kube-discovery-amd64:1.0"
-  "gcr.io/google_containers/kube-dnsmasq-amd64:1.4"
-  "gcr.io/google_containers/kubedns-amd64:1.9"
+  "quay.io/calico/cni:v1.9.1"
+  "quay.io/calico/kube-policy-controller:v0.6.0"
+  "quay.io/calico/node:v1.3.0"
+  "weaveworks/weave-kube:2.0.0"
+  "weaveworks/weave-npc:2.0.0"
 )
 
 for i in "${images[@]}" ; do docker pull "${i}" ; done

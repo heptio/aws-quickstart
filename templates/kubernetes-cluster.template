@@ -264,33 +264,33 @@ Mappings:
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     us-west-1:
-      '64': ami-35e7c755
+      '64': ami-e7604c87
     ap-south-1:
-      '64': ami-3c225e53
+      '64': ami-d82759b7
     eu-west-2:
-      '64': ami-37392e53
+      '64': ami-6a17010e
     eu-west-1:
-      '64': ami-2ebaae48
+      '64': ami-c99f84af
     ap-northeast-2:
-      '64': ami-10bc607e
+      '64': ami-d61fc0b8
     ap-northeast-1:
-      '64': ami-c2e4e1a5
+      '64': ami-58786f3f
     sa-east-1:
-      '64': ami-03cfa16f
+      '64': ami-88c5aee4
     ca-central-1:
-      '64': ami-b24df1d6
+      '64': ami-9cac13f8
     ap-southeast-1:
-      '64': ami-0968ee6a
+      '64': ami-b4f877d7
     ap-southeast-2:
-      '64': ami-3a2f3b59
+      '64': ami-40eafa23
     eu-central-1:
-      '64': ami-8cdc07e3
+      '64': ami-dfa204b0
     us-east-1:
-      '64': ami-704a0866
+      '64': ami-a90a20bf
     us-east-2:
-      '64': ami-487d5b2d
+      '64': ami-cf7756aa
     us-west-2:
-      '64': ami-a60d6ec6
+      '64': ami-9fdacee6
 
 # Helper Conditions which help find the right values for resources
 Conditions:
