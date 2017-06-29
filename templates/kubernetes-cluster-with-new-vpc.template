@@ -275,6 +275,12 @@ Mappings:
     us-west-2:
       '64': ami-b2d463d2
 
+Conditions:
+  UsEast1Condition:
+    Fn::Equals:
+    - !Ref AWS::Region
+    - "us-east-1"
+
 Resources:
   # Resources for new VPC
   VPC:
@@ -290,7 +296,13 @@ Resources:
   DHCPOptions:
     Type: AWS::EC2::DHCPOptions
     Properties:
-      DomainName: !Sub "${AWS::Region}.compute.internal"
+      DomainName:
+        # us-east-1 needs .ec2.internal, the rest of the regions get <region>.compute.internal.
+        # See http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_DHCP_Options.html
+        Fn::If:
+        - UsEast1Condition
+        - "ec2.internal"
+        - !Sub "${AWS::Region}.compute.internal"
       DomainNameServers:
       - AmazonProvidedDNS
 
