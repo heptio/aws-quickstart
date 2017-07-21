@@ -26,6 +26,7 @@ test -n "{{LoadBalancerDns}}"
 test -n "{{LoadBalancerName}}"
 test -n "{{ClusterToken}}"
 test -n "{{NetworkingProviderUrl}}"
+test -n "{{DashboardUrl}}"
 test -n "{{Region}}"
 
 # kubeadm wants lowercase for DNS (as it probably should)
@@ -63,6 +64,9 @@ kubectl label node "${HOSTNAME}" "kubernetes.io/role=master"
 # Add-on for networking providers, so pods can communicate.  see the scripts/
 # directory of the quickstart.  Currently either calico.yaml or weave.yaml
 kubectl apply -f {{NetworkingProviderUrl}}
+
+# Install the kubernetes dashboard by default
+kubectl apply -f {{DashboardUrl}}
 
 INSTANCE_ID=$(ec2metadata --instance-id)
 # Add this machine (master) to the load balancer for external access

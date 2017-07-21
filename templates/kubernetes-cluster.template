@@ -350,6 +350,7 @@ Resources:
                 LoadBalancerName: !Ref ApiLoadBalancer
                 ClusterToken: !GetAtt KubeadmToken.Token
                 NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
+                DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/dashboard.yaml"
                 Region: !Ref AWS::Region
 
           commands:
