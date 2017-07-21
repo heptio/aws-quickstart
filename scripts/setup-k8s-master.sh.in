@@ -84,3 +84,9 @@ kubeadm alpha phase kubeconfig client-certs \
   >$KUBECONFIG_OUTPUT
 chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
+
+# And for local debugging, set up ~/.kube/config for the main user account on
+# the master.
+mkdir -p /home/ubuntu/.kube
+cp /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
+chown -R ubuntu:ubuntu /home/ubuntu/.kube
