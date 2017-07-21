@@ -31,6 +31,8 @@ test -n "{{Region}}"
 # kubeadm wants lowercase for DNS (as it probably should)
 LB_DNS=$(echo "{{LoadBalancerDns}}" | tr 'A-Z' 'a-z')
 
+HOSTNAME="$(hostname -f)"
+
 # reset kubeadm (workaround for kubelet package presence)
 kubeadm reset
 
@@ -41,6 +43,7 @@ kind: MasterConfiguration
 token: {{ClusterToken}}
 cloudProvider: aws
 kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
+nodeName: ${HOSTNAME}
 apiServerCertSANs:
 - ${LB_DNS}
 EOF
@@ -55,7 +58,7 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 kubectl create clusterrolebinding admin-cluster-binding --clusterrole=cluster-admin --user=admin
 
 # Label this node as a master
-kubectl label node "$(hostname -f)" "kubernetes.io/role=master"
+kubectl label node "${HOSTNAME}" "kubernetes.io/role=master"
 
 # Add-on for networking providers, so pods can communicate.  see the scripts/
 # directory of the quickstart.  Currently either calico.yaml or weave.yaml

@@ -264,33 +264,33 @@ Mappings:
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     us-west-1:
-      '64': ami-e7604c87
+      '64': ami-74012814
     ap-south-1:
-      '64': ami-d82759b7
+      '64': ami-1e6d1571
     eu-west-2:
-      '64': ami-6a17010e
+      '64': ami-7942531d
     eu-west-1:
-      '64': ami-c99f84af
+      '64': ami-421bf53b
     ap-northeast-2:
-      '64': ami-d61fc0b8
+      '64': ami-d373adbd
     ap-northeast-1:
-      '64': ami-58786f3f
+      '64': ami-eb81608d
     sa-east-1:
-      '64': ami-88c5aee4
+      '64': ami-00dfab6c
     ca-central-1:
-      '64': ami-9cac13f8
+      '64': ami-d3338cb7
     ap-southeast-1:
-      '64': ami-b4f877d7
+      '64': ami-1364f470
     ap-southeast-2:
-      '64': ami-40eafa23
+      '64': ami-115f4072
     eu-central-1:
-      '64': ami-dfa204b0
+      '64': ami-eb852884
     us-east-1:
-      '64': ami-a90a20bf
+      '64': ami-2d4d5f3b
     us-east-2:
-      '64': ami-cf7756aa
+      '64': ami-d77454b2
     us-west-2:
-      '64': ami-9fdacee6
+      '64': ami-025e467b
 
 # Helper Conditions which help find the right values for resources
 Conditions:
@@ -395,6 +395,16 @@ Resources:
           - AssociationProvidedCondition
           - !Ref ClusterAssociation
           - !Ref AWS::StackName
+        # Also tag it with kubernetes.io/cluster/clustername=owned, which is the newer convention for cluster resources
+      - Key:
+          Fn::Sub:
+          - "kubernetes.io/cluster/${ClusterID}"
+          - ClusterID:
+              Fn::If:
+              - AssociationProvidedCondition
+              - !Ref ClusterAssociation
+              - !Ref AWS::StackName
+        Value: 'owned'
       # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
       ImageId:
         Fn::FindInMap:
@@ -550,6 +560,17 @@ Resources:
           - !Ref ClusterAssociation
           - !Ref AWS::StackName
         PropagateAtLaunch: 'true'
+        # Also tag it with kubernetes.io/cluster/clustername=owned, which is the newer convention for cluster resources
+      - Key:
+          Fn::Sub:
+          - "kubernetes.io/cluster/${ClusterID}"
+          - ClusterID:
+              Fn::If:
+              - AssociationProvidedCondition
+              - !Ref ClusterAssociation
+              - !Ref AWS::StackName
+        Value: 'owned'
+        PropagateAtLaunch: 'true'
     # Tells the group how many instances to update at a time, if an update is applied
     UpdatePolicy:
       AutoScalingRollingUpdate:
@@ -583,7 +604,7 @@ Resources:
             # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
             # all that's left is to join the cluster with the correct token.
             "03-k8s-setup-node":
-              command: !Sub "kubeadm reset && kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
+              command: !Sub "kubeadm reset && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
@@ -646,6 +667,15 @@ Resources:
           - AssociationProvidedCondition
           - !Ref ClusterAssociation
           - !Ref AWS::StackName
+      - Key:
+          Fn::Sub:
+          - "kubernetes.io/cluster/${ClusterID}"
+          - ClusterID:
+              Fn::If:
+              - AssociationProvidedCondition
+              - !Ref ClusterAssociation
+              - !Ref AWS::StackName
+        Value: 'owned'
       - Key: Name
         Value: k8s-cluster-security-group
 
@@ -822,6 +852,15 @@ Resources:
           - AssociationProvidedCondition
           - !Ref ClusterAssociation
           - !Ref AWS::StackName
+      - Key:
+          Fn::Sub:
+          - "kubernetes.io/cluster/${ClusterID}"
+          - ClusterID:
+              Fn::If:
+              - AssociationProvidedCondition
+              - !Ref ClusterAssociation
+              - !Ref AWS::StackName
+        Value: 'owned'
       - Key: 'kubernetes.io/service-name'
         Value: 'kube-system/apiserver-public'
 
