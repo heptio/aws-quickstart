@@ -14,7 +14,7 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.6.6"
+KUBERNETES_RELEASE="v1.7.2"
 CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
 
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
@@ -38,7 +38,7 @@ apt-get install -qy \
 apt-mark hold docker-engine
 
 ## Install official Kubernetes binaries
-mkdir /tmp/kubebin
+mkdir -p /tmp/kubebin
 (
   cd /tmp/kubebin
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubelet"
@@ -51,7 +51,7 @@ mkdir /tmp/kubebin
   install -o root -g root -m 0755 ./kubelet /usr/bin/kubelet
 
   # Also install CNI
-  mkdir /opt/cni
+  mkdir -p /opt/cni
   (
     cd /opt/cni
     tar -xzf "/tmp/kubebin/cni-amd64-${CNI_RELEASE}.tar.gz"
@@ -60,13 +60,14 @@ mkdir /tmp/kubebin
 rm -rf /tmp/kubebin
 
 ## Install systemd scripts for kubelet
-sudo mkdir /etc/systemd/system/kubelet.service.d
+sudo mkdir -p /etc/systemd/system/kubelet.service.d
 install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/kubelet.service" \
   /etc/systemd/system/kubelet.service
 install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/10-kubeadm.conf" \
   /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/20-cloud-provider.conf" \
   /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+
 systemctl daemon-reload
 systemctl enable kubelet
 
@@ -78,9 +79,9 @@ pip install awscli
 images=(
   "gcr.io/google_containers/etcd-amd64:3.0.17"
   "gcr.io/google_containers/etcd:2.2.1"
-  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.2"
-  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.2"
-  "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.2"
+  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4"
+  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4"
+  "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4"
   "gcr.io/google_containers/kube-apiserver-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-controller-manager-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
@@ -89,8 +90,8 @@ images=(
   "quay.io/calico/cni:v1.9.1"
   "quay.io/calico/kube-policy-controller:v0.6.0"
   "quay.io/calico/node:v1.3.0"
-  "weaveworks/weave-kube:2.0.0"
-  "weaveworks/weave-npc:2.0.0"
+  "weaveworks/weave-kube:2.0.1"
+  "weaveworks/weave-npc:2.0.1"
 )
 
 for i in "${images[@]}" ; do docker pull "${i}" ; done

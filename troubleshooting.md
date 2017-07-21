@@ -18,11 +18,11 @@ These commands will delete all load balancers in the stack.  (Warning: this is d
 
 ```
 # Set to the VPC that you want to delete. Example: vpc-1234abcd
-export VPC_IC='<vpc-id>'
+export VPC_ID='<vpc-id>'
 # Set to the region in which you created the Quick Start.  Example: us-west-1
 export AWS_DEFAULT_REGION='<aws-region>'
 
-aws elb describe-load-balancers --query "LoadBalancerDescriptions[?VPCId == \`${VPCID}\`].LoadBalancerName" --output text \
+aws elb describe-load-balancers --query "LoadBalancerDescriptions[?VPCId == \`${VPC_ID}\`].LoadBalancerName" --output text \
     | xargs -n 1 echo \
     | while read lb; do
           aws elb delete-load-balancer --load-balancer-name="${lb}"
