@@ -15,14 +15,16 @@
     "region": "{{user `aws_region`}}",
     "source_ami": "{{user `aws_base_ami`}}",
     "instance_type": "t2.micro",
-    "ami_name": "Heptio K8s ITHAKA AMI (Ubuntu 16.04 LTS {{isotime \"2006-01-02 15.04.05\"}})",
+    "ami_name": "K8s Playground Node AMI {{isotime \"2006-01-02 15.04.05\"}})",
     "ami_groups": "{{user `ami_groups`}}",
     "communicator": "ssh",
     "ssh_username": "ubuntu",
     "subnet_id": "{{user `subnet_id`}}",
     "vpc_id": "{{user `vpc_id`}}",
     "ssh_file_transfer_method": "sftp",
-    "ssh_pty": true
+    "ssh_pty": true,
+    "iam_instance_profile": "sagoku"
+
   }],
   "provisioners": [
     {

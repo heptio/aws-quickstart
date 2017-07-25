@@ -17,6 +17,7 @@ SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
 KUBERNETES_RELEASE="v1.6.4"
 CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
 
+
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
 echo "deb https://apt.dockerproject.org/repo ubuntu-$(lsb_release -cs) main" > /etc/apt/sources.list.d/docker.list
 
@@ -41,41 +42,45 @@ apt-get install -qy \
 #apt-mark hold docker-engine
 
 ## Install official Kubernetes binaries
-mkdir /tmp/kubebin
-(
-  cd /tmp/kubebin
-  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubelet"
-  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubectl"
-  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubeadm"
-  curl -sf -O "https://storage.googleapis.com/kubernetes-release/network-plugins/cni-amd64-${CNI_RELEASE}.tar.gz"
-
-  install -o root -g root -m 0755 ./kubeadm /usr/bin/kubeadm
-  install -o root -g root -m 0755 ./kubectl /usr/bin/kubectl
-  install -o root -g root -m 0755 ./kubelet /usr/bin/kubelet
-
-  # Also install CNI
-  mkdir /opt/cni
-  (
-    cd /opt/cni
-    tar -xzf "/tmp/kubebin/cni-amd64-${CNI_RELEASE}.tar.gz"
-  )
-)
-rm -rf /tmp/kubebin
-
+#mkdir /tmp/kubebin
+#(
+#  cd /tmp/kubebin
+#  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubelet"
+#  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubectl"
+#  curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubeadm"
+#  curl -sf -O "https://storage.googleapis.com/kubernetes-release/network-plugins/cni-amd64-${CNI_RELEASE}.tar.gz"
+#
+#  install -o root -g root -m 0755 ./kubeadm /usr/bin/kubeadm
+#  install -o root -g root -m 0755 ./kubectl /usr/bin/kubectl
+#  install -o root -g root -m 0755 ./kubelet /usr/bin/kubelet
+#
+#  # Also install CNI
+#  mkdir /opt/cni
+#  (
+#    cd /opt/cni
+#    tar -xzf "/tmp/kubebin/cni-amd64-${CNI_RELEASE}.tar.gz"
+#  )
+#)
+#rm -rf /tmp/kubebin
+#
 ## Install systemd scripts for kubelet
-sudo mkdir /etc/systemd/system/kubelet.service.d
-install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/kubelet.service" \
-  /etc/systemd/system/kubelet.service
-install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/10-kubeadm.conf" \
-  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/20-cloud-provider.conf" \
-  /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
-systemctl daemon-reload
-systemctl enable kubelet
-
-## We will need AWS tools as well
-pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz"
+#sudo mkdir /etc/systemd/system/kubelet.service.d
+#install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/kubelet.service" \
+#  /etc/systemd/system/kubelet.service
+#install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/10-kubeadm.conf" \
+#  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+#install -o root -g root -m 0600 "${SOURCE_DIR}/systemd/20-cloud-provider.conf" \
+#  /etc/systemd/system/kubelet.service.d/20-cloud-provider.conf
+#systemctl daemon-reload
+#systemctl enable kubelet
+#
+### We will need AWS tools as well
+#pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz"
 pip install awscli
+
+echo "Add Docker Registry Cert"
+aws s3 cp s3://sequoia-install/certs-and-keys/dockerregistrySSL/docker-registry.acorn.cirrostratus.org.crt /usr/local/share/ca-certificates
+update-ca-certificates
 
 ## Pre-fetch various images, so that `kubeadm init` is a bit quicker
 ## TODO: address logging and metrics
@@ -103,15 +108,16 @@ images=(
   "gcr.io/google_containers/kubedns-amd64:1.9"
 )
 
-for i in "${images[@]}" ; do docker pull "${i}" ; done
+#for i in "${images[@]}" ; do docker pull "${i}" ; done
 
 ## Save release version, so that we can call `kubeadm init --use-kubernetes-version="$(cat /etc/kubernetes_community_ami_version)` and ensure we get the same version
-echo "${KUBERNETES_RELEASE}" > /etc/kubernetes_community_ami_version
+#echo "${KUBERNETES_RELEASE}" > /etc/kubernetes_community_ami_version
 
 ## Cleanup packer SSH key and machine ID generated for this boot
 rm /root/.ssh/authorized_keys
 rm /home/ubuntu/.ssh/authorized_keys
 rm /etc/machine-id
 touch /etc/machine-id
+
 
 ## Done!
