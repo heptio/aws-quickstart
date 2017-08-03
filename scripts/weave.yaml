@@ -6,9 +6,9 @@ items:
     kind: ServiceAccount
     metadata:
       name: weave-net
-      namespace: kube-system
       labels:
         name: weave-net
+      namespace: kube-system
   - apiVersion: rbac.authorization.k8s.io/v1beta1
     kind: ClusterRole
     metadata:
@@ -52,9 +52,9 @@ items:
     kind: DaemonSet
     metadata:
       name: weave-net
-      namespace: kube-system
       labels:
         name: weave-net
+      namespace: kube-system
     spec:
       template:
         metadata:
@@ -71,7 +71,7 @@ items:
                     fieldRef:
                       apiVersion: v1
                       fieldPath: spec.nodeName
-              image: 'weaveworks/weave-kube:2.0.0'
+              image: 'weaveworks/weave-kube:2.0.1'
               livenessProbe:
                 httpGet:
                   host: 127.0.0.1
@@ -97,7 +97,7 @@ items:
                 - name: lib-modules
                   mountPath: /lib/modules
             - name: weave-npc
-              image: 'weaveworks/weave-npc:2.0.0'
+              image: 'weaveworks/weave-npc:2.0.1'
               resources:
                 requests:
                   cpu: 10m
