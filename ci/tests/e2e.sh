@@ -111,10 +111,13 @@ KUBECONFIG_COMMAND=$(aws cloudformation describe-stacks \
 )
 
 # Other than that, just run the command as the Output suggests
-eval "${KUBECONFIG_COMMAND}"
+(
+    cd /tmp
+    eval "${KUBECONFIG_COMMAND}"
+)
 
-# It should have copied a "kubeconfig" file to our current directory
-export KUBECONFIG=./kubeconfig
+# It should have copied a "kubeconfig" file to our current directory (which was /tmp)
+export KUBECONFIG=/tmp/kubeconfig
 
 ########################
 # K8S tests start here #
