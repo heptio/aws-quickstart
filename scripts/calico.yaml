@@ -1,8 +1,8 @@
 ### Downloaded and re-hosted with permission from
-### http://docs.projectcalico.org/v2.3/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+### https://docs.projectcalico.org/v2.3/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 
 # Calico Version v2.3.0
-# http://docs.projectcalico.org/v2.3/releases#v2.3.0
+# https://docs.projectcalico.org/v2.3/releases#v2.3.0
 # This manifest includes the following component versions:
 #   calico/node:v1.3.0
 #   calico/cni:v1.9.1

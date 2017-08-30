@@ -14,7 +14,7 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.7.2"
+KUBERNETES_RELEASE="v1.7.4"
 CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
 
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
@@ -86,12 +86,13 @@ images=(
   "gcr.io/google_containers/kube-controller-manager-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
+  "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.3"
   "gcr.io/google_containers/pause-amd64:3.0"
   "quay.io/calico/cni:v1.9.1"
   "quay.io/calico/kube-policy-controller:v0.6.0"
   "quay.io/calico/node:v1.3.0"
-  "weaveworks/weave-kube:2.0.1"
-  "weaveworks/weave-npc:2.0.1"
+  "weaveworks/weave-kube:2.0.4"
+  "weaveworks/weave-npc:2.0.4"
 )
 
 for i in "${images[@]}" ; do docker pull "${i}" ; done
