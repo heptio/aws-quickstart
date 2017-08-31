@@ -20,7 +20,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -o verbose
 
 export ERRCODE_FAILURE=1
 export ERRCODE_TIMEOUT=10
