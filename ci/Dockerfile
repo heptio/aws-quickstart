@@ -16,12 +16,12 @@ RUN apk add --no-cache \
         less \
         python \
         py-pip \
+        py-yaml \
         openssh-client \
         jq \
         bind-tools \
         tar \
-    && pip install awscli
+    && pip install awscli boto
 
 VOLUME /src
 WORKDIR /src
-

@@ -17,7 +17,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -o verbose
 
 cd "$(dirname "$0")/.."
 
@@ -61,4 +60,4 @@ docker run --rm \
     -v "$(pwd)":/src \
     -v "$(dirname "${SSH_KEY}"):/tmp/ssh" \
     "${IMAGE_NAME}" \
-    ./ci/tests/e2e.sh
+    ./ci/all.sh
