@@ -71,7 +71,7 @@ items:
                     fieldRef:
                       apiVersion: v1
                       fieldPath: spec.nodeName
-              image: 'weaveworks/weave-kube:2.0.1'
+              image: 'weaveworks/weave-kube:2.0.4'
               livenessProbe:
                 httpGet:
                   host: 127.0.0.1
@@ -97,7 +97,13 @@ items:
                 - name: lib-modules
                   mountPath: /lib/modules
             - name: weave-npc
-              image: 'weaveworks/weave-npc:2.0.1'
+              env:
+                - name: HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: spec.nodeName
+              image: 'weaveworks/weave-npc:2.0.4'
               resources:
                 requests:
                   cpu: 10m

@@ -367,14 +367,6 @@ Resources:
       AllocationId: !GetAtt NATEIP.AllocationId
       SubnetId: !Ref PublicSubnet
 
-  PublicSubnetRoute:
-    DependsOn: VPCGatewayAttachment
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PublicSubnetRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
   PrivateSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
