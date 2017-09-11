@@ -87,6 +87,15 @@ To deploy your own changes manually from source, you'll need to upload the conte
 
 If you're making changes to things like the Kubernetes version or anything installed in the base AMI, you'll also need to rebuild the AMI with Packer.  See the "Local development" section below for more details.
 
+Optionally, aws-quickstart also supports overriding a few select kubernetes binaries (kubelet, kubeadm, kubectl) at runtime for development purposes.  To replace these binaries at runtime, simply place your custom versions into the `$S3_PREFIX/bin/` folder:
+```
+$ aws s3 ls s3://quickstart/overrides/bin/
+2017-09-08 13:04:02   71453136 kubeadm
+2017-09-08 12:58:27   72501019 kubectl
+2017-09-08 12:58:27  146464528 kubelet
+```
+These will be downloaded during cloudformation initialization and subsequently become available to the running instance.
+
 An example deployment:
 
 ```
