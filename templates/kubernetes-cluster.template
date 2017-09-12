@@ -324,6 +324,13 @@ Resources:
           master-setup: master-setup
         master-setup:
           files:
+            # Script that will allow for development kubernetes binaries to replace the pre-packaged AMI binaries.
+            "/tmp/kubernetes-override-binaries.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-override-binaries.sh.in"
+              mode: '000755'
+              context:
+                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/bin/"
+
             # Configuration file for the cloudwatch agent. The file is a Mustache template, and we're creating it with
             # the below context (mainly to substitute in the AWS Stack Name for the logging group.)
             "/tmp/kubernetes-awslogs.conf":
@@ -354,6 +361,9 @@ Resources:
                 Region: !Ref AWS::Region
 
           commands:
+            # Override the AMI binaries with any kubelet/kubeadm/kubectl binaries in the S3 bucket
+            "00-kubernetes-override-binaries":
+              command: "/tmp/kubernetes-override-binaries.sh"
             # Install the Cloudwatch agent with configuration for the current region and log group name
             "01-cloudwatch-agent-setup":
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
@@ -588,6 +598,11 @@ Resources:
         node-setup:
           # (See comments in the master instance Metadata for details.)
           files:
+            "/tmp/kubernetes-override-binaries.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-override-binaries.sh.in"
+              mode: '000755'
+              context:
+                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/bin/"
             "/tmp/kubernetes-awslogs.conf":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
               context:
@@ -598,6 +613,8 @@ Resources:
             "/etc/systemd/system/awslogs.service":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
           commands:
+            "00-kubernetes-override-binaries":
+              command: "/tmp/kubernetes-override-binaries.sh"
             "01-cloudwatch-agent-setup":
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
             "02-cloudwatch-service-config":
