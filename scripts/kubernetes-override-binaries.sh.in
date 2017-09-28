@@ -27,7 +27,7 @@ for binary in kubelet kubeadm kubectl; do
     url=${url_base%/}/$binary
 
     echo "Attempting to download: $url"
-    if /usr/bin/curl -f -o /tmp/$binary "$url"; then
+    if /usr/bin/curl -Lf -o /tmp/$binary "$url"; then
         md5=($(/usr/bin/md5sum /tmp/$binary))
         echo "Installing override binary $binary with md5sum: $md5"
         /usr/bin/install -o root -g root -m 0755 /tmp/$binary /usr/bin/$binary
