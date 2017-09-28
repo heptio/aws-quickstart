@@ -40,7 +40,7 @@ Metadata:
       - InstanceType
       - DiskSizeGb
       - ClusterSubnetId
-      - LoadBalancerSubnetId      
+      - LoadBalancerSubnetId
     - Label:
         default: Access Configuration
       Parameters:
@@ -187,7 +187,7 @@ Parameters:
   # Specifies the IP range from which you will have SSH access over port 22
   # Used in the allow22 SecurityGroup
   SSHLocation:
-    Description: CIDR block (IP address range) to allow SSH access to the 
+    Description: CIDR block (IP address range) to allow SSH access to the
       instances. Use 0.0.0.0/0 to allow access from all locations.
     Type: String
     MinLength: '9'
@@ -223,11 +223,11 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    
+
     Default: quickstart-reference
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
-      scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
+      scripts from the scripts/ and templates/ directories of your own fork of the Heptio
       Quick Start assets, uploaded to S3 and stored at
       ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
@@ -253,7 +253,7 @@ Parameters:
     ConstraintDescription: 'Currently supported values are "calico" and "weave"'
     Default: calico
     Description: Choose the networking provider to use for communication between
-      pods in the Kubernetes cluster. Supported configurations are calico 
+      pods in the Kubernetes cluster. Supported configurations are calico
       (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
       and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
     Type: String
