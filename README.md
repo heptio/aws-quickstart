@@ -126,7 +126,7 @@ aws cloudformation create-stack \
   --stack-name $STACK \
   --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
-    ParameterKey=AvailabilityZone,ParameterValue=$AZ \
+    ParameterKey=AvailabilityZone,ParameterValue=$AVAILABILITY_ZONE \
     ParameterKey=KeyName,ParameterValue=$KEYNAME \
     ParameterKey=QSS3BucketName,ParameterValue=$S3_BUCKET \
     ParameterKey=QSS3KeyPrefix,ParameterValue=$S3_PREFIX \
