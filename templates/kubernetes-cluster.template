@@ -116,7 +116,7 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
 
   LoadBalancerType:
-    Description:  Create Internet-facing (public, external) or Internal-facing Load Balancers?
+    Description:  Create Internet-facing (public, external) or Internal-facing Load Balancers
     Type: String
     Default: internal
     AllowedValues: [ "internet-facing", "internal" ]
