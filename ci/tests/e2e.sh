@@ -20,6 +20,7 @@
 set -o errexit
 set -o nounset
 set -o pipefail
+set -o xtrace
 
 export ERRCODE_FAILURE=1
 export ERRCODE_TIMEOUT=10
@@ -57,7 +58,7 @@ kubectl version --client >/dev/null
 mkdir -p /tmp/ci/sonobuoy
 
 curl -sfL -o /tmp/ci/sonobuoy/sonobuoy.yaml \
-      https://raw.githubusercontent.com/heptio/sonobuoy/master/examples/quickstart/aggregate.yaml
+      https://raw.githubusercontent.com/heptio/sonobuoy/master/examples/quickstart.yaml
 
 aws s3 sync --acl=public-read --delete ./templates "s3://${S3_BUCKET}/${S3_PREFIX}/templates/"
 aws s3 sync --acl=public-read --delete ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}/scripts/"
