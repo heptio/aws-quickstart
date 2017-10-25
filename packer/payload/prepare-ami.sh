@@ -77,8 +77,7 @@ pip install awscli
 
 ## Pre-fetch various images, so that `kubeadm init` is a bit quicker
 images=(
-  "gcr.io/google_containers/etcd-amd64:3.0.17"
-  "gcr.io/google_containers/etcd:2.2.1"
+  "gcr.io/google_containers/etcd-amd64:3.1.10"
   "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4"
   "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4"
   "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4"
@@ -88,9 +87,9 @@ images=(
   "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.3"
   "gcr.io/google_containers/pause-amd64:3.0"
-  "quay.io/calico/cni:v1.9.1"
-  "quay.io/calico/kube-policy-controller:v0.6.0"
-  "quay.io/calico/node:v1.3.0"
+  "quay.io/calico/cni:v1.11.0"
+  "quay.io/calico/kube-controllers:v1.0.0"
+  "quay.io/calico/node:v2.6.2"
   "weaveworks/weave-kube:2.0.4"
   "weaveworks/weave-npc:2.0.4"
 )
