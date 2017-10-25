@@ -46,6 +46,7 @@ token: {{ClusterToken}}
 cloudProvider: aws
 kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
 nodeName: ${HOSTNAME}
+tokenTTL: 94608000s
 apiServerCertSANs:
 - ${LB_DNS}
 EOF
@@ -82,10 +83,19 @@ aws elb register-instances-with-load-balancer \
 # Use kubeadm's kubeconfig command to grab a client-cert-authenticated
 # kubeconfig file for administrative access to the cluster.
 KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
-kubeadm alpha phase kubeconfig client-certs \
+
+# TODO(@chuckha): --apiserver-advertise-address is resolved to an IP address.
+# We don't want this to happen because we need to use the ELB load balancer as the
+# api server address.
+# Instead we set the server by hand.
+kubeadm alpha phase kubeconfig user \
   --client-name admin \
-  --server "https://${LB_DNS}" \
+  --apiserver-advertise-address "${LB_DNS}" \
   >$KUBECONFIG_OUTPUT
+
+# This line sets the generated kubeconfig file's api server address to our loadbalancer.
+# This should be removed if kubeadm supports non-ip advertise addresses.
+KUBECONFIG="${KUBECONFIG_OUTPUT}" kubectl config set-cluster kubernetes --server="https://${LB_DNS}"
 chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
 
