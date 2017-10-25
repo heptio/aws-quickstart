@@ -41,6 +41,7 @@ Metadata:
       - DiskSizeGb
       - ClusterSubnetId
       - LoadBalancerSubnetId
+      - LoadBalancerType
     - Label:
         default: Access Configuration
       Parameters:
@@ -88,6 +89,8 @@ Metadata:
         default: Networking Provider
       LoadBalancerSubnetId:
         default: Load Balancer Subnet
+      LoadBalancerType:
+        default: Load Balancer Type
 
 
 # The Parameters allow the user to pass custom settings to the stack before creation
@@ -111,6 +114,12 @@ Parameters:
     Description: Existing subnet to use for load balancing HTTPS access to the Kubernetes API server.
       Must be a public subnet. Must belong to the Availability Zone above.
     Type: AWS::EC2::Subnet::Id
+
+  LoadBalancerType:
+    Description:  Create Internet-facing (public, external) or Internal-facing Load Balancers?
+    Type: String
+    Default: internal
+    AllowedValues: [ "internet-facing", "internal" ]
 
   ClusterAssociation:
     Description: Enter a string, unique within your AWS account, to associate resources in
@@ -850,7 +859,7 @@ Resources:
   ApiLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
-      Scheme: internet-facing
+      Scheme: !Ref LoadBalancerType
       Listeners:
       - Protocol: TCP
         InstancePort: 6443
