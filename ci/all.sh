@@ -7,5 +7,5 @@ set -o pipefail
 cd "$(dirname "$0")/.."
 
 for t in ./ci/tests/*; do
-    "${t}"
+    sh -x -c "${t}"
 done

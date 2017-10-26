@@ -254,7 +254,7 @@ Parameters:
     Default: calico
     Description: Choose the networking provider to use for communication between
       pods in the Kubernetes cluster. Supported configurations are calico
-      (http://docs.projectcalico.org/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/)
+      (https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/)
       and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
     Type: String
 
@@ -263,34 +263,35 @@ Mappings:
 
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
+  RegionMap:
     us-west-1:
-      '64': ami-28300048
+      '64': ami-965965f6
     ap-south-1:
-      '64': ami-28773647
+      '64': ami-27d59748
     eu-west-2:
-      '64': ami-57594b33
+      '64': ami-22908d46
     eu-west-1:
-      '64': ami-8331fafa
+      '64': ami-a7df7ade
     ap-northeast-2:
-      '64': ami-11c3197f
+      '64': ami-4401a42a
     ap-northeast-1:
-      '64': ami-d4eb3fb2
+      '64': ami-ad60c1cb
     sa-east-1:
-      '64': ami-0184f86d
+      '64': ami-db1860b7
     ca-central-1:
-      '64': ami-f363da97
+      '64': ami-c7843ca3
     ap-southeast-1:
-      '64': ami-4c5d2f2f
+      '64': ami-dce8a9bf
     ap-southeast-2:
-      '64': ami-fd84649f
+      '64': ami-408c6322
     eu-central-1:
-      '64': ami-2a972445
+      '64': ami-3058e35f
     us-east-1:
-      '64': ami-312ddf4b
+      '64': ami-9fa90ee5
     us-east-2:
-      '64': ami-ce270aab
+      '64': ami-4686aa23
     us-west-2:
-      '64': ami-9143bae9
+      '64': ami-f431fe8c
 
 # Helper Conditions which help find the right values for resources
 Conditions:
@@ -358,6 +359,7 @@ Resources:
                 ClusterToken: !GetAtt KubeadmToken.Token
                 NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
                 DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/dashboard.yaml"
+                StorageClassUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/default.storageclass.yaml"
                 Region: !Ref AWS::Region
 
           commands:
