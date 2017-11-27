@@ -46,7 +46,7 @@ token: {{ClusterToken}}
 cloudProvider: aws
 kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
 nodeName: ${HOSTNAME}
-tokenTTL: 94608000s
+tokenTTL: 0s
 apiServerCertSANs:
 - ${LB_DNS}
 EOF
