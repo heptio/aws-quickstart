@@ -73,6 +73,9 @@ kubectl apply -f {{DashboardUrl}}
 # Install the default StorageClass
 kubectl apply -f {{StorageClassUrl}}
 
+# Set up the network policy blocking the AWS metadata endpoint from the default namespace.
+kubectl apply -f {{NetworkPolicyUrl}}
+
 INSTANCE_ID=$(ec2metadata --instance-id)
 # Add this machine (master) to the load balancer for external access
 aws elb register-instances-with-load-balancer \
