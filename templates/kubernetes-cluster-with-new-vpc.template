@@ -80,13 +80,20 @@ Parameters:
   InstanceType:
     Description: EC2 instance type for the cluster.
     Type: String
-    Default: t2.medium
+    Default: m3.medium
     AllowedValues:
+    - t1.micro
     - t2.nano
     - t2.micro
     - t2.small
     - t2.medium
     - t2.large
+    - t2.xlarge
+    - t2.2xlarge
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
     - m3.medium
     - m3.large
     - m3.xlarge
@@ -96,6 +103,35 @@ Parameters:
     - m4.2xlarge
     - m4.4xlarge
     - m4.10xlarge
+    - m4.16xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - r4.4xlarge
+    - r4.8xlarge
+    - r4.16xlarge
+    - x1.16xlarge
+    - x1.32xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - i3.large
+    - i3.xlarge
+    - i3.2xlarge
+    - i3.4xlarge
+    - i3.8xlarge
+    - i3.16xlarge
+    - c1.medium
+    - c1.xlarge
     - c3.large
     - c3.xlarge
     - c3.2xlarge
@@ -108,19 +144,18 @@ Parameters:
     - c4.8xlarge
     - g2.2xlarge
     - g2.8xlarge
-    - r3.large
-    - r3.xlarge
-    - r3.2xlarge
-    - r3.4xlarge
-    - r3.8xlarge
-    - i2.xlarge
-    - i2.2xlarge
-    - i2.4xlarge
-    - i2.8xlarge
+    - g3.4xlarge
+    - g3.8xlarge
+    - g3.16xlarge
+    - p2.xlarge
+    - p2.8xlarge
+    - p2.16xlarge
     - d2.xlarge
     - d2.2xlarge
     - d2.4xlarge
     - d2.8xlarge
+    - f1.2xlarge
+    - f1.16xlarge
     ConstraintDescription: must be a valid EC2 instance type.
 
   # Specifies the size of the root disk for all EC2 instances, including master
@@ -137,11 +172,18 @@ Parameters:
     Type: String
     Default: t2.micro
     AllowedValues:
+    - t1.micro
     - t2.nano
     - t2.micro
     - t2.small
     - t2.medium
     - t2.large
+    - t2.xlarge
+    - t2.2xlarge
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
     - m3.medium
     - m3.large
     - m3.xlarge
@@ -151,6 +193,35 @@ Parameters:
     - m4.2xlarge
     - m4.4xlarge
     - m4.10xlarge
+    - m4.16xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - r4.4xlarge
+    - r4.8xlarge
+    - r4.16xlarge
+    - x1.16xlarge
+    - x1.32xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - i3.large
+    - i3.xlarge
+    - i3.2xlarge
+    - i3.4xlarge
+    - i3.8xlarge
+    - i3.16xlarge
+    - c1.medium
+    - c1.xlarge
     - c3.large
     - c3.xlarge
     - c3.2xlarge
@@ -163,19 +234,18 @@ Parameters:
     - c4.8xlarge
     - g2.2xlarge
     - g2.8xlarge
-    - r3.large
-    - r3.xlarge
-    - r3.2xlarge
-    - r3.4xlarge
-    - r3.8xlarge
-    - i2.xlarge
-    - i2.2xlarge
-    - i2.4xlarge
-    - i2.8xlarge
+    - g3.4xlarge
+    - g3.8xlarge
+    - g3.16xlarge
+    - p2.xlarge
+    - p2.8xlarge
+    - p2.16xlarge
     - d2.xlarge
     - d2.2xlarge
     - d2.4xlarge
     - d2.8xlarge
+    - f1.2xlarge
+    - f1.16xlarge
     ConstraintDescription: must be a valid EC2 instance type.
 
   AvailabilityZone:
@@ -185,7 +255,7 @@ Parameters:
     ConstraintDescription: must be the name of an AWS Availability Zone
 
   AdminIngressLocation:
-    Description: CIDR block (IP address range) to allow SSH access to the 
+    Description: CIDR block (IP address range) to allow SSH access to the
       bastion host and HTTPS access to the Kubernetes API. Use 0.0.0.0/0
       to allow access from all locations.
     Type: String
@@ -213,13 +283,13 @@ Parameters:
     Default: quickstart-reference
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
-      scripts from the scripts/ and templates/ directories of your own fork of the Heptio 
+      scripts from the scripts/ and templates/ directories of your own fork of the Heptio
       Quick Start assets, uploaded to S3 and stored at
       ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
-  
+
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
@@ -239,7 +309,7 @@ Parameters:
     ConstraintDescription: 'Currently supported values are "calico" and "weave"'
     Default: calico
     Description: Choose the networking provider to use for communication between
-      pods in the Kubernetes cluster. Supported configurations are calico 
+      pods in the Kubernetes cluster. Supported configurations are calico
       (https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/)
       and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
     Type: String
@@ -464,7 +534,7 @@ Resources:
         FromPort: '22'
         ToPort: '22'
         CidrIp: !Ref AdminIngressLocation
-  
+
   # Call the cluster template and supply its parameters
   # This creates a second stack that creates the actual Kubernetes cluster
   # within the new VPC
@@ -519,7 +589,7 @@ Outputs:
       file for accessing the new cluster via kubectl, a Kubernetes command line tool.
       Creates a "kubeconfig" file in the current directory. Then, you can run
       "export KUBECONFIG=$(pwd)/kubeconfig" to ensure kubectl uses this configuration file.
-      About kubectl - https://kubernetes.io/docs/user-guide/prereqs/ 
+      About kubectl - https://kubernetes.io/docs/user-guide/prereqs/
     Value: !Sub >-
       SSH_KEY="path/to/${KeyName}.pem";
       scp
