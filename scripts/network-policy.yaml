@@ -13,3 +13,15 @@ spec:
         - 169.254.169.254/32
   policyTypes:
   - Egress
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-dashboard
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  policyTypes:
+  - Ingress
