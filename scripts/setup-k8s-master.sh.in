@@ -28,6 +28,7 @@ test -n "{{ClusterToken}}"
 test -n "{{NetworkingProviderUrl}}"
 test -n "{{DashboardUrl}}"
 test -n "{{StorageClassUrl}}"
+test -n "{{NetworkPolicyUrl}}"
 test -n "{{Region}}"
 
 # kubeadm wants lowercase for DNS (as it probably should)
@@ -46,7 +47,7 @@ token: {{ClusterToken}}
 cloudProvider: aws
 kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
 nodeName: ${HOSTNAME}
-tokenTTL: 94608000s
+tokenTTL: 0s
 apiServerCertSANs:
 - ${LB_DNS}
 EOF
@@ -72,6 +73,9 @@ kubectl apply -f {{DashboardUrl}}
 
 # Install the default StorageClass
 kubectl apply -f {{StorageClassUrl}}
+
+# Set up the network policy blocking the AWS metadata endpoint from the default namespace.
+kubectl apply -f {{NetworkPolicyUrl}}
 
 INSTANCE_ID=$(ec2metadata --instance-id)
 # Add this machine (master) to the load balancer for external access
