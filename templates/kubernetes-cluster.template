@@ -118,7 +118,7 @@ Parameters:
   LoadBalancerType:
     Description:  Create Internet-facing (public, external) or Internal-facing Load Balancers
     Type: String
-    Default: internal
+    Default: internet-facing
     AllowedValues: [ "internet-facing", "internal" ]
 
   ClusterAssociation:
