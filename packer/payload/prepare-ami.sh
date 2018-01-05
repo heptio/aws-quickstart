@@ -14,8 +14,14 @@
 #    limitations under the License.
 
 SOURCE_DIR="$(cd "$(dirname "$0")"; pwd)"
-KUBERNETES_RELEASE="v1.8.4"
-CNI_RELEASE="0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff"
+
+CNI_RELEASE="v0.6.0"
+ETCD_RELEASE="3.1.10" # etcd does not use the v prefix for versions.
+KUBE_DASHBOARD_RELEASE="v1.8.0"
+KUBE_DNS_RELEASE="1.14.7"
+KUBERNETES_RELEASE="v1.9.0"
+
+CNI="cni-plugins-amd64-${CNI_RELEASE}.tgz"
 
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
 echo "deb https://apt.dockerproject.org/repo ubuntu-$(lsb_release -cs) main" > /etc/apt/sources.list.d/docker.list
@@ -26,6 +32,7 @@ apt-get update -q
 apt-get upgrade -qy
 
 ## TODO: Update docker to use overlay2 by default
+## TODO(chuckha) can bump docker version. See https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG-1.9.md#external-dependencies
 apt-get install -qy \
     docker-engine=1.12.6-0~ubuntu-xenial \
     jq \
@@ -37,6 +44,7 @@ apt-get install -qy \
 
 apt-mark hold docker-engine
 
+
 ## Install official Kubernetes binaries
 mkdir -p /tmp/kubebin
 (
@@ -44,17 +52,17 @@ mkdir -p /tmp/kubebin
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubelet"
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubectl"
   curl -sf -O "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_RELEASE}/bin/linux/amd64/kubeadm"
-  curl -sf -O "https://storage.googleapis.com/kubernetes-release/network-plugins/cni-amd64-${CNI_RELEASE}.tar.gz"
+  curl -sf -O "https://storage.googleapis.com/kubernetes-release/network-plugins/${CNI}"
 
   install -o root -g root -m 0755 ./kubeadm /usr/bin/kubeadm
   install -o root -g root -m 0755 ./kubectl /usr/bin/kubectl
   install -o root -g root -m 0755 ./kubelet /usr/bin/kubelet
 
   # Also install CNI
-  mkdir -p /opt/cni
+  mkdir -p /opt/cni/bin
   (
-    cd /opt/cni
-    tar -xzf "/tmp/kubebin/cni-amd64-${CNI_RELEASE}.tar.gz"
+    cd /opt/cni/bin
+    tar -xzf "/tmp/kubebin/${CNI}"
   )
 )
 rm -rf /tmp/kubebin
@@ -76,16 +84,17 @@ pip install "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-
 pip install awscli
 
 ## Pre-fetch various images, so that `kubeadm init` is a bit quicker
+## TODO(chuckha) Update calico version(s): https://docs.projectcalico.org/v2.6/releases/
 images=(
-  "gcr.io/google_containers/etcd-amd64:3.1.10"
-  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4"
-  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4"
-  "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4"
+  "gcr.io/google_containers/etcd-amd64:${ETCD_RELEASE}"
+  "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:${KUBE_DNS_RELEASE}"
+  "gcr.io/google_containers/k8s-dns-kube-dns-amd64:${KUBE_DNS_RELEASE}"
+  "gcr.io/google_containers/k8s-dns-sidecar-amd64:${KUBE_DNS_RELEASE}"
   "gcr.io/google_containers/kube-apiserver-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-controller-manager-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-proxy-amd64:${KUBERNETES_RELEASE}"
   "gcr.io/google_containers/kube-scheduler-amd64:${KUBERNETES_RELEASE}"
-  "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.3"
+  "gcr.io/google_containers/kubernetes-dashboard-amd64:${KUBE_DASHBOARD_RELEASE}"
   "gcr.io/google_containers/pause-amd64:3.0"
   "quay.io/calico/cni:v1.11.0"
   "quay.io/calico/kube-controllers:v1.0.0"
