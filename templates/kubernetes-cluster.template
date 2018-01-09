@@ -330,7 +330,7 @@ Mappings:
     eu-central-1:
       '64': ami-57ec6038
     us-east-1:
-      '64': ami-6369fa19
+      '64': ami-957920ef
     us-east-2:
       '64': ami-e89eb08d
     us-west-2:
@@ -391,6 +391,11 @@ Resources:
             "/etc/systemd/system/awslogs.service":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
 
+            # setup kubelet hostname
+            "/tmp/setup-kubelet-hostname.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
+              mode: '000755'
+
             # Setup script for initializing the Kubernetes master instance.  This is where most of the cluster
             # initialization happens.  See scripts/setup-k8s-master.sh in the Quick Start repo for details.
             "/tmp/setup-k8s-master.sh":
@@ -416,9 +421,11 @@ Resources:
             # Enable the Cloudwatch service and launch it
             "02-cloudwatch-service-config":
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
-
+            # Setup kubelet hostname
+            "03-setup-kubelet-hostname":
+              command: "/tmp/setup-kubelet-hostname.sh"
             # Run the master setup
-            "03-master-setup":
+            "04-master-setup":
               command: "/tmp/setup-k8s-master.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
@@ -481,14 +488,17 @@ Resources:
             #!/bin/bash
             set -o xtrace
 
-            /usr/local/bin/cfn-init \
+            CFN_INIT=$(which cfn-init)
+            CFN_SIGNAL=$(which cfn-signal)
+
+            ${!CFN_INIT} \
               --verbose \
               --stack '${AWS::StackName}' \
               --region '${AWS::Region}' \
               --resource K8sMasterInstance \
               --configsets master-setup
 
-            /usr/local/bin/cfn-signal \
+            ${!CFN_SIGNAL} \
               --exit-code $? \
               --stack '${AWS::StackName}' \
               --region '${AWS::Region}' \
@@ -658,6 +668,9 @@ Resources:
               mode: '000755'
             "/etc/systemd/system/awslogs.service":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+            "/tmp/setup-kubelet-hostname.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
+              mode: '000755'
           commands:
             "00-kubernetes-override-binaries":
               command: "/tmp/kubernetes-override-binaries.sh"
@@ -665,9 +678,11 @@ Resources:
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
             "02-cloudwatch-service-config":
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
+            "03-setup-kubelet-hostname":
+              command: "/tmp/setup-kubelet-hostname.sh"
             # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
             # all that's left is to join the cluster with the correct token.
-            "03-k8s-setup-node":
+            "04-k8s-setup-node":
               command: !Sub "kubeadm reset && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
