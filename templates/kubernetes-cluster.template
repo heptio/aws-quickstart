@@ -683,7 +683,7 @@ Resources:
             # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
             # all that's left is to join the cluster with the correct token.
             "04-k8s-setup-node":
-              command: !Sub "kubeadm reset && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
+              command: !Sub "kubeadm reset && kubeadm join --discovery-token-unsafe-skip-ca-verification --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
