@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Copyright 2017 by the contributors
@@ -16,8 +16,8 @@ Copyright 2017 by the contributors
    limitations under the License.
 """
 
-import sys, yaml, json, boto.ec2
-from boto.ec2 import connect_to_region
+import sys, yaml, json, boto3
+from botocore.exceptions import ClientError
 
 tmplfile = './templates/kubernetes-cluster.template'
 
@@ -31,8 +31,9 @@ yaml.add_multi_constructor('', default_ctor)
 amis_byregion = {}
 errs = []
 
+
 def recordError(err):
-    sys.stderr.write("Error: "+err+"\n")
+    print("Error: {}".format(err), file=sys.stderr)
     errs.append(err)
 
 # Open the template containing the AMI region map, read each AMI from
@@ -40,36 +41,30 @@ def recordError(err):
 with open(tmplfile, 'r') as stream:
     doc = yaml.load(stream)
     # eg: { "us-west-1": ... }
-    for region, archmap in doc["Mappings"]["RegionMap"].iteritems():
+    for region, archmap in doc["Mappings"]["RegionMap"].items():
         # eg: { "64": "ami-1234abcd" }
-        for arch, ami in archmap.iteritems():
+        for arch, ami in archmap.items():
             amis_byregion[region] = ami
 
-for region, ami in amis_byregion.iteritems():
+for region, ami in amis_byregion.items():
     try:
         # Ask EC2 about it
-        conn = connect_to_region(region)
-        imgs = conn.get_all_images(image_ids=[ami])
-
-        # Make sure we got exactly one result
-        if len(imgs) == 0:
-            recordError("Region "+region+": AMI "+ami+" not found")
-            continue
-        elif len(imgs) > 1:
-            recordError("Region "+region+": Multiple AMIs found with ID "+ami+"?")
-            continue
+        conn = boto3.resource('ec2', region_name=region)
+        img = conn.Image(ami)
 
         # Ensure it's public
-        img = imgs[0]
-        if img.is_public:
-            print("Region "+region+": AMI "+ami+" exists and is public")
+        if img.public:
+            print("Region {}: AMI {} exists and is public".format(region, ami))
         else:
-            recordError("Region "+region+": AMI "+ami+" is not marked as public")
-    except boto.exception.EC2ResponseError as err:
-        recordError("Region "+region+": "+err.message)
+            recordError("Region {}: AMI {} is not marked as public".format(region, ami))
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidAMIID.NotFound':
+            recordError("Region {}: AMI {} not found".format(region, ami))
+        else:
+            recordError("Region {}: {}".format(region, e.response['Error']['Message']))
 
 if len(errs) > 0:
-    print str(len(errs)) + " errors found"
+    print("{} errors found".format(len(errs)), file=sys.stderr)
     exit(1)
 else:
-    print "Success: 0 errors found"
+    print("Success: 0 errors found")
