@@ -14,14 +14,14 @@ RUN apk add --no-cache \
         ca-certificates \
         groff \
         less \
-        python \
-        py-pip \
-        py-yaml \
+        python3 \
+        py3-pip \
+        py3-yaml \
         openssh-client \
         jq \
         bind-tools \
         tar \
-    && pip install awscli boto
+    && pip3 install awscli boto3
 
 VOLUME /src
 WORKDIR /src
