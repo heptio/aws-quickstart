@@ -24,7 +24,7 @@ REGION=us-west-2
 AZ=us-west-2b
 
 # What to name your CloudFormation stack
-STACK=Heptio-Kubernete
+STACK=Heptio-Kubernetes
 
 # Which SSH key you want to allow access to the cluster
 KEYNAME=mykey
@@ -85,7 +85,7 @@ aws cloudformation create-stack \
 
 To deploy your own changes manually from source, you'll need to upload the contents of the `scripts` and `templates` directories to S3, and configure your CloudFormation to use those S3 URL's.
 
-If you're making changes to things like the Kubernetes version or anything installed in the base AMI, you'll also need to rebuild the AMI with Wardroom.  See the "Local development" section below for more details.
+If you're making changes to things like the Kubernetes version or anything installed in the base AMI, you'll also need to rebuild the AMI with [Wardroom][wardroom].  See the "Local development" section below for more details.
 
 Optionally, aws-quickstart also supports overriding a few select kubernetes binaries (kubelet, kubeadm, kubectl) at runtime for development purposes.  To replace these binaries at runtime, simply place your custom versions into the `$S3_PREFIX/bin/` folder:
 ```
@@ -163,18 +163,18 @@ Guide](https://s3.amazonaws.com/quickstart-reference/heptio/latest/doc/heptio-ku
   cluster depends on. Mainly this is the API load balancer, the master node, the
   auto-scaling group of kubelet nodes, and the various security groups required
   to allow them to talk to one another. The nodes in this template are created
-  from a base AMI, which you can recreate using
-  [wardroom](https://github.com/heptiolabs/wardroom).
+  from a base AMI, which you can recreate using [wardroom][wardroom].
 - `kubernetes-cluster-with-new-vpc.template` sets up a new VPC with a public and
   private subnets, and calls out to `kubernetes-cluster.template` as a
   sub-stack.
 
 **The `scripts` directory**:
 
-This contains files that required by the templates. This is to avoid inlining a
-lot of text directly in the template files. Templates access files from this
-directory by referencing their S3 URL's, which is why this directory and the
-`templates` directory both need to be copied into S3 in order to be used.
+This contains files that are required by the templates. This is to avoid
+inlining a lot of text directly in the template files. Templates access files
+from this directory by referencing their S3 URL's, which is why this directory
+and the `templates` directory both need to be copied into S3 in order to be
+used.
 
 Some notable files in this directory:
 
@@ -182,7 +182,8 @@ Some notable files in this directory:
   part of its initialization. It is a [Mustache
   template](https://mustache.github.io/) file, with template variables that are
   set by the `kubernetes-cluster.template` template. Note that this template
-  file does not install the Kubernetes binaries, those are baked into the AMI as
-  part of Wardroom.
+  file does not install the Kubernetes binaries, those are baked into the AMI.
 - `calico.yaml`, `weave.yaml`: These are networking add-ons which are applied
   with `kubectl` by the master after the Kubernetes cluster is initialized.
+
+[wardroom]: https://github.com/heptiolabs/wardroom
