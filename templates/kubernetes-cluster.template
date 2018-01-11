@@ -308,33 +308,36 @@ Mappings:
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     us-west-1:
-      '64': ami-39023959
+      '64': ami-ff48489f
     ap-south-1:
-      '64': ami-5399d73c
+      '64': ami-275b0f48
+# Uncomment these when boto can support eu-west-3.
+#    eu-west-3:
+#      '64': ami-3f19ae42
     eu-west-2:
-      '64': ami-a3a1bec7
+      '64': ami-0afde56e
     eu-west-1:
-      '64': ami-31d36048
+      '64': ami-cdc95fb4
     ap-northeast-2:
-      '64': ami-0d379063
+      '64': ami-2bcd6d45
     ap-northeast-1:
-      '64': ami-24de6742
+      '64': ami-8c5ac6ea
     sa-east-1:
-      '64': ami-bb4206d7
+      '64': ami-08c38064
     ca-central-1:
-      '64': ami-ab5ae1cf
+      '64': ami-7be4611f
     ap-southeast-1:
-      '64': ami-5f0c5f3c
+      '64': ami-09f48275
     ap-southeast-2:
-      '64': ami-3882775a
+      '64': ami-a230c2c0
     eu-central-1:
-      '64': ami-57ec6038
+      '64': ami-0bcf5c64
     us-east-1:
-      '64': ami-6369fa19
+      '64': ami-12bded68
     us-east-2:
-      '64': ami-e89eb08d
+      '64': ami-81fad1e4
     us-west-2:
-      '64': ami-7ed30d06
+      '64': ami-2d5ef455
 
 # Helper Conditions which help find the right values for resources
 Conditions:
@@ -667,8 +670,9 @@ Resources:
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
             # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
             # all that's left is to join the cluster with the correct token.
+            # TODO(chuckha) stop using --discovery-token-unsafe-skip-ca-verification
             "03-k8s-setup-node":
-              command: !Sub "kubeadm reset && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
+              command: !Sub "kubeadm reset && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} --discovery-token-unsafe-skip-ca-verification ${K8sMasterInstance.PrivateIp}:6443"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
@@ -962,7 +966,7 @@ Outputs:
 
   JoinNodes:
     Description: Command to join more nodes to this cluster.
-    Value: !Sub "kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}"
+    Value: !Sub "kubeadm join --token=${KubeadmToken.Token} --discovery-token-unsafe-skip-ca-verification ${K8sMasterInstance.PrivateIp}"
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
