@@ -30,6 +30,7 @@ test -n "{{DashboardUrl}}"
 test -n "{{StorageClassUrl}}"
 test -n "{{NetworkPolicyUrl}}"
 test -n "{{Region}}"
+test -n "{{ClusterInfoBucket}}"
 
 # kubeadm wants lowercase for DNS (as it probably should)
 LB_DNS=$(echo "{{LoadBalancerDns}}" | tr 'A-Z' 'a-z')
@@ -55,6 +56,8 @@ EOF
 # Initialize master node
 kubeadm init --config /tmp/kubeadm.yaml
 rm /tmp/kubeadm.yaml
+
+kubectl --kubeconfig=/etc/kubernetes/admin.conf get cm -n kube-public cluster-info -o jsonpath={.data.kubeconfig} | aws s3 cp - s3://{{ClusterInfoBucket}}/cluster-info.yaml
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
