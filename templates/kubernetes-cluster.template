@@ -353,6 +353,18 @@ Conditions:
 
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
+  ClusterInfoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      Tags:
+      - Key: KubernetesCluster
+        Value:
+          Fn::If:
+          - AssociationProvidedCondition
+          - !Ref ClusterAssociation
+          - !Ref AWS::StackName
+
   # Install a CloudWatch logging group for system logs for each instance
   KubernetesLogGroup:
     Type: AWS::Logs::LogGroup
@@ -411,6 +423,7 @@ Resources:
                 DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/dashboard.yaml"
                 StorageClassUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/default.storageclass.yaml"
                 NetworkPolicyUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/network-policy.yaml"
+                ClusterInfoBucket: !Ref ClusterInfoBucket
                 Region: !Ref AWS::Region
 
           commands:
@@ -673,6 +686,14 @@ Resources:
             "/tmp/setup-kubelet-hostname.sh":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
               mode: '000755'
+            "/tmp/setup-k8s-node.sh":
+              mode: '000755'
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-k8s-node.sh.in"
+              context:
+                K8sMasterPrivateIp: !GetAtt K8sMasterInstance.PrivateIp
+                ClusterToken: !GetAtt KubeadmToken.Token
+                ClusterInfoBucket: !Ref ClusterInfoBucket
+
           commands:
             "00-kubernetes-override-binaries":
               command: "/tmp/kubernetes-override-binaries.sh"
@@ -682,10 +703,8 @@ Resources:
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
             "03-setup-kubelet-hostname":
               command: "/tmp/setup-kubelet-hostname.sh"
-            # This joins the existing cluster with kubeadm.  Kubeadm is preinstalled in the AMI this template uses, so
-            # all that's left is to join the cluster with the correct token.
             "04-k8s-setup-node":
-              command: !Sub "kubeadm reset && kubeadm join --discovery-token-unsafe-skip-ca-verification --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}:6443"
+              command: "/tmp/setup-k8s-node.sh"
     Properties:
       # Refers to the NodeInstanceProfile resource, which applies the IAM role for the nodes
       # The IAM role allows us to create further AWS resources (like an EBS drive) from the cluster
@@ -841,6 +860,15 @@ Resources:
             - logs:DescribeLogStreams
             Resource: !Sub ["${LogGroupArn}:*", LogGroupArn: !GetAtt KubernetesLogGroup.Arn]
 
+      - PolicyName: discoverBucketWrite
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${ClusterInfoBucket}/cluster-info.yaml"
+
   # Resource that creates the node IAM role
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -898,7 +926,16 @@ Resources:
             - logs:DescribeLogStreams
             Resource: !Sub ["${LogGroupArn}:*", LogGroupArn: !GetAtt KubernetesLogGroup.Arn]
 
-  # Resource that creates the master node IAM role
+      - PolicyName: discoverBucketWrite
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            Resource: !Sub "arn:aws:s3:::${ClusterInfoBucket}/cluster-info.yaml"
+
+  # Bind the MasterRole to a profile for the VM instance.
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -960,6 +997,69 @@ Resources:
       - Key: Name
         Value: apiserver-lb-security-group
 
+  # Give the cleanup lambda function the necessary policy.
+  CleanupClusterInfoRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service: ["lambda.amazonaws.com"]
+          Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+      - PolicyName: s3upload
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action: ['s3:DeleteObject']
+            Resource: [!Sub "arn:aws:s3:::${ClusterInfoBucket}/cluster-info.yaml"]
+
+  # CleanupClusterInfo backs the custom resource defined below.
+  # When the custom resource gets created, deleted or updated this function will be executed.
+  CleanupClusterInfo:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile:
+          Fn::Sub: |
+            import boto3
+            import cfnresponse
+
+            def lambda_handler(event, context):
+                try:
+                    s3 = boto3.client('s3')
+                    bucket = '${ClusterInfoBucket}'
+                    key = 'cluster-info.yaml'
+
+                    if event['RequestType'] == 'Delete':
+                        s3.delete_object(Bucket=bucket, Key=key)
+
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                    return
+                except Exception as e:
+                    print(e)
+                cfnresponse.send(event, context, cfnresponse.FAILED, {})
+      Handler: "index.lambda_handler"
+      Runtime: "python3.6"
+      Timeout: "5"
+      Role: !GetAtt CleanupClusterInfoRole.Arn
+
+  CleanupClusterInfoOnDelete:
+    Type: "Custom::CleanupClusterInfo"
+    Properties:
+      ServiceToken: !GetAtt CleanupClusterInfo.Arn
+
+
 # Outputs are what AWS will show you after stack creation
 # Generally they let you easily access some information about the stack
 # like what IP address is assigned to your master node
@@ -979,7 +1079,7 @@ Outputs:
 
   JoinNodes:
     Description: Command to join more nodes to this cluster.
-    Value: !Sub "kubeadm join --token=${KubeadmToken.Token} ${K8sMasterInstance.PrivateIp}"
+    Value: !Sub "aws cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
