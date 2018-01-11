@@ -337,7 +337,7 @@ Mappings:
     sa-east-1:
       '64': ami-e075ed8c
     us-east-1:
-      '64': ami-957920ef
+      '64': ami-9dcfdb8a
     us-east-2:
       '64': ami-fcc19b99
     us-west-1:
