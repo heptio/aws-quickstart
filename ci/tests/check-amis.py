@@ -65,7 +65,9 @@ for region, ami in amis_byregion.items():
             recordError("Region {}: AMI {} is not marked as public".format(region, ami))
             continue
         # Tags are stored as a list of objects instead of a dictionary
-        tags = {d['Key']: d['Value'] for d in img.tags}
+        tags = {}
+        if img.tags is not None:
+            tags = {d['Key']: d['Value'] for d in img.tags}
         valid = True
         # Make sure the tags are what we expect them to be
         for (key, expected) in ami_spec.items():
