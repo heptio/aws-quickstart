@@ -71,7 +71,7 @@ for region, ami in amis_byregion.items():
         valid = True
         # Make sure the tags are what we expect them to be
         for (key, expected) in ami_spec.items():
-            val = img.get(key)
+            val = tags.get(key)
             if val != expected:
                 recordError("Region {}: AMI {} tag {} has value {}, not {}".format(
                     region,
