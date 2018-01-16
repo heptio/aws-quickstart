@@ -17,9 +17,12 @@ Copyright 2017 by the contributors
 """
 
 import sys, yaml, json, boto3
+import os.path
 from botocore.exceptions import ClientError
 
 tmplfile = './templates/kubernetes-cluster.template'
+
+WARDROOM_SPEC = 'wardroom.json'
 
 # Python's YAML library tries to interpret things like !Ref and the like as
 # python classes, so just make that a no-op.
@@ -31,6 +34,11 @@ yaml.add_multi_constructor('', default_ctor)
 amis_byregion = {}
 errs = []
 
+ami_spec = {}
+
+with open(os.path.join(os.path.dirname(__file__), '..', '..', WARDROOM_SPEC)) as f:
+    body = json.load(f)
+    ami_spec = body['ami']
 
 def recordError(err):
     print("Error: {}".format(err), file=sys.stderr)
@@ -53,10 +61,26 @@ for region, ami in amis_byregion.items():
         img = conn.Image(ami)
 
         # Ensure it's public
-        if img.public:
-            print("Region {}: AMI {} exists and is public".format(region, ami))
-        else:
+        if not img.public:
             recordError("Region {}: AMI {} is not marked as public".format(region, ami))
+            continue
+        # Tags are stored as a list of objects instead of a dictionary
+        tags = {d['Key']: d['Value'] for d in img.tags}
+        valid = True
+        # Make sure the tags are what we expect them to be
+        for (key, expected) in ami_spec.items():
+            val = img.get(key)
+            if val != expected:
+                recordError("Region {}: AMI {} tag {} has value {}, not {}".format(
+                    region,
+                    ami,
+                    key,
+                    val,
+                    expected))
+                valid = False
+                break
+        if valid:
+            print("Region {}: AMI {} is valid".format(region, ami))
     except ClientError as e:
         if e.response['Error']['Code'] == 'InvalidAMIID.NotFound':
             recordError("Region {}: AMI {} not found".format(region, ami))
