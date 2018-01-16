@@ -311,7 +311,7 @@ Parameters:
     Description: Choose the networking provider to use for communication between
       pods in the Kubernetes cluster. Supported configurations are calico
       (https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/)
-      and weave (https://github.com/weaveworks/weave/blob/master/site/kube-addon.md).
+      and weave (https://github.com/weaveworks/weave/blob/master/site/kubernetes/kube-addon.md).
     Type: String
 
 Mappings:
