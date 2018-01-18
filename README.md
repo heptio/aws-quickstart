@@ -81,6 +81,14 @@ aws cloudformation create-stack \
   --capabilities=CAPABILITY_IAM
 ```
 
+### New wardroom builds
+
+To ensure that the [wardroom][wardroom]-sourced AMIs are the ones we expect, our
+CI checks that the tags in [`wardroom.json`](wardroom.json) match the tags for
+every AMI in the cloudformation template. If the AMI images are updated,
+`wardroom.json` will need to be changed as well to, at minimum, the new commit
+hash.
+
 ### Testing local changes
 
 To deploy your own changes manually from source, you'll need to upload the contents of the `scripts` and `templates` directories to S3, and configure your CloudFormation to use those S3 URL's.
