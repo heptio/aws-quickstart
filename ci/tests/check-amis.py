@@ -112,7 +112,7 @@ if __name__ == '__main__':
     amis = read_ami_file()
     successes = sum(check_valid(spec, ami, region)
                     for (region, ami) in amis.items())
-    errors = len(amis_by_region) - successes
+    errors = len(amis) - successes
     if errors == 0:
         print("Success: 0 errors found")
     else:
