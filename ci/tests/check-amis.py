@@ -20,9 +20,8 @@ import sys, yaml, json, boto3
 import os.path
 from botocore.exceptions import ClientError
 
-tmplfile = './templates/kubernetes-cluster.template'
-
-WARDROOM_SPEC = 'wardroom.json'
+TEMPLATE_FILE = './templates/kubernetes-cluster.template'
+WARDROOM_SPEC = './wardroom.json'
 
 # Python's YAML library tries to interpret things like !Ref and the like as
 # python classes, so just make that a no-op.
@@ -30,67 +29,92 @@ def default_ctor(loader, tag_suffix, node):
     return tag_suffix + ' ' + ''.join(str(e) for e in node.value)
 yaml.add_multi_constructor('', default_ctor)
 
-# Keep track of the AMI's and the errors for them
-amis_byregion = {}
-errs = []
-
-ami_spec = {}
-
-with open(os.path.join(os.path.dirname(__file__), '..', '..', WARDROOM_SPEC)) as f:
-    body = json.load(f)
-    ami_spec = body['ami']
+def load_spec():
+    with open(WARDROOM_SPEC) as f:
+        body = json.load(f)
+        return body['ami']
 
 def recordError(err):
     print("Error: {}".format(err), file=sys.stderr)
-    errs.append(err)
 
-# Open the template containing the AMI region map, read each AMI from
-# into amis_byregion
-with open(tmplfile, 'r') as stream:
-    doc = yaml.load(stream)
-    # eg: { "us-west-1": ... }
-    for region, archmap in doc["Mappings"]["RegionMap"].items():
-        # eg: { "64": "ami-1234abcd" }
-        for arch, ami in archmap.items():
-            amis_byregion[region] = ami
+def read_ami_file():
+    amis_by_region = {}
+    # Open the template containing the AMI region map, read each AMI from
+    # into amis_by_region
+    with open(TEMPLATE_FILE, 'r') as stream:
+        doc = yaml.load(stream)
+        # eg: { "us-west-1": ... }
+        for region, archmap in doc["Mappings"]["RegionMap"].items():
+            # eg: { "64": "ami-1234abcd" }
+            for arch, ami in archmap.items():
+                amis_by_region[region] = ami
+    return amis_by_region
 
-for region, ami in amis_byregion.items():
-    try:
-        # Ask EC2 about it
-        conn = boto3.resource('ec2', region_name=region)
-        img = conn.Image(ami)
+def get_image(region, ami):
+    conn = boto3.resource('ec2', region_name=region)
+    return conn.Image(ami)
 
-        # Ensure it's public
-        if not img.public:
-            recordError("Region {}: AMI {} is not marked as public".format(region, ami))
-            continue
-        # Tags are stored as a list of objects instead of a dictionary
-        tags = {}
-        if img.tags is not None:
-            tags = {d['Key']: d['Value'] for d in img.tags}
-        valid = True
-        # Make sure the tags are what we expect them to be
-        for (key, expected) in ami_spec.items():
+def check_public(img, region):
+    if not img.public:
+        recordError(
+            "Region {}: AMI {} is not marked as public".format(region, ami)
+        )
+        return False
+    return True
+
+def check_tags(expected_tags, img, region):
+    if img.tags is None:
+        recordError("Region {}: AMI {} has no tags".format(region, img.id))
+        return False
+    tags = {d['Key']: d['Value'] for d in img.tags}
+    for (key, expected) in expected_tags.items():
             val = tags.get(key)
+            if val is None:
+                recordError(
+                    "Region {}: AMI {} is missing tag {}".format(
+                        region,
+                        img.id,
+                        key
+                    )
+                )
+                return False
             if val != expected:
-                recordError("Region {}: AMI {} tag {} has value {}, not {}".format(
-                    region,
-                    ami,
-                    key,
-                    val,
-                    expected))
-                valid = False
-                break
+                recordError(
+                    "Region {}: AMI {} tag {} has value {}, not {}".format(
+                        region,
+                        img.id,
+                        key,
+                        val,
+                        expected)
+                )
+                return False
+    return True
+
+def check_valid(spec, ami, region):
+    try:
+        img = get_image(region, ami)
+        valid = check_public(img, region) and check_tags(spec, img, region)
         if valid:
             print("Region {}: AMI {} is valid".format(region, ami))
+        return valid
     except ClientError as e:
         if e.response['Error']['Code'] == 'InvalidAMIID.NotFound':
             recordError("Region {}: AMI {} not found".format(region, ami))
         else:
-            recordError("Region {}: {}".format(region, e.response['Error']['Message']))
+            recordError("Region {}: {}".format(
+                region,
+                e.response['Error']['Message']
+            ))
+        return False
 
-if len(errs) > 0:
-    print("{} errors found".format(len(errs)), file=sys.stderr)
-    exit(1)
-else:
-    print("Success: 0 errors found")
+if __name__ == '__main__':
+    spec = load_spec()
+    amis = read_ami_file()
+    successes = sum(check_valid(spec, ami, region)
+                    for (region, ami) in amis.items())
+    errors = len(amis_by_region) - successes
+    if errors == 0:
+        print("Success: 0 errors found")
+    else:
+        print("{} errors found".format(errors), file=sys.stderr)
+        exit(1)
