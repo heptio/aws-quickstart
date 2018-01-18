@@ -63,12 +63,13 @@ def check_public(img, region):
     return True
 
 def check_tags(expected_tags, img, region):
-    if img.tags is None:
-        recordError("Region {}: AMI {} has no tags".format(region, img.id))
+    if img.description is None:
+        recordError("Region {}: AMI {} has no description".format(region, img.id))
         return False
-    tags = {d['Key']: d['Value'] for d in img.tags}
+    # key1=val1 key2=val2 ...
+    tags = dict(kv.split('=') for kv in img.description.split())
     for (key, expected) in expected_tags.items():
-            val = tags.get(key)
+            val = tags.get(key) 
             if val is None:
                 recordError(
                     "Region {}: AMI {} is missing tag {}".format(
