@@ -304,40 +304,39 @@ Parameters:
 
 # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 Mappings:
-
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     ap-northeast-1:
-      '64': ami-b42f4ed2
+      '64': ami-57e08131
     ap-northeast-2:
-      '64': ami-69eb4807
+      '64': ami-b2f152dc
     ap-south-1:
-      '64': ami-5e82d431
+      '64': ami-b3acfadc
     ap-southeast-1:
-      '64': ami-c6fa85ba
+      '64': ami-ac7f01d0
     ap-southeast-2:
-      '64': ami-d4da25b6
+      '64': ami-8727d8e5
     ca-central-1:
-      '64': ami-876de8e3
+      '64': ami-9d6eebf9
     eu-central-1:
-      '64': ami-416ef12e
+      '64': ami-8ad749e5
     eu-west-1:
-      '64': ami-4b74ec32
+      '64': ami-2155ce58
     eu-west-2:
-      '64': ami-6fffe40b
+      '64': ami-d0ecf7b4
     eu-west-3:
-      '64': ami-2beb5d56
+      '64': ami-7fd66002
     sa-east-1:
-      '64': ami-a488c5c8
+      '64': ami-88a1ece4
     us-east-2:
-      '64': ami-5ae1cb3f
+      '64': ami-60f7dd05
     us-west-1:
-      '64': ami-f2e6e492
+      '64': ami-a29b99c2
     us-west-2:
-      '64': ami-9a0fbce2
+      '64': ami-6e79cb16
     us-east-1:
-      '64': ami-2c7b5656
-    # Helper Conditions which help find the right values for resources
+      '64': ami-78476f02
+# Helper Conditions which help find the right values for resources
 Conditions:
   AssociationProvidedCondition:
     Fn::Not:
