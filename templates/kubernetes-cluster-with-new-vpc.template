@@ -317,34 +317,35 @@ Parameters:
 Mappings:
   RegionMap:
     ap-northeast-1:
-      '64': ami-18afc47f
+      '64': ami-d39a02b5
     ap-northeast-2:
-      '64': ami-93d600fd
+      '64': ami-67973709
     ap-south-1:
-      '64': ami-dd3442b2
+      '64': ami-5d055232
     ap-southeast-1:
-      '64': ami-87b917e4
+      '64': ami-325d2e4e
     ap-southeast-2:
-      '64': ami-e6b58e85
+      '64': ami-37df2255
     ca-central-1:
-      '64': ami-7112a015
+      '64': ami-f0870294
     eu-central-1:
-      '64': ami-fe408091
+      '64': ami-af79ebc0
     eu-west-1:
-      '64': ami-ca80a0b9
+      '64': ami-4d46d534
     eu-west-2:
-      '64': ami-ede2e889
+      '64': ami-d7aab2b3
+    eu-west-3:
+      '64': ami-5e0eb923
     sa-east-1:
-      '64': ami-e075ed8c
+      '64': ami-1157157d
     us-east-1:
-      '64': ami-9dcfdb8a
+      '64': ami-41e0b93b
     us-east-2:
-      '64': ami-fcc19b99
+      '64': ami-2581aa40
     us-west-1:
-      '64': ami-b05203d0
+      '64': ami-79aeae19
     us-west-2:
-      '64': ami-b2d463d2
-
+      '64': ami-1ee65166
 Conditions:
   UsEast1Condition:
     Fn::Equals:
@@ -520,6 +521,10 @@ Resources:
 
             curl -s -o $BASTION_BOOTSTRAP_FILE $BASTION_BOOTSTRAP
             chmod +x $BASTION_BOOTSTRAP_FILE
+
+            # This gets us far enough in the bastion script to be useful.
+            apt-get -y update && apt-get -y install python-pip
+            pip install --upgrade pip &> /dev/null
 
             ./$BASTION_BOOTSTRAP_FILE --banner https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/banner_message.txt --enable true
 
