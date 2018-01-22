@@ -1,7 +1,7 @@
 [
     {
         "ParameterKey": "AvailabilityZone",
-        "ParameterValue": "$[alfred_genaz_1]"
+        "ParameterValue": "$[alfred_getaz_1]"
     },
     {
         "ParameterKey": "AdminIngressLocation",
@@ -10,6 +10,10 @@
     {
         "ParameterKey": "KeyName",
         "ParameterValue": "tonynv"
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.large"
     },
     {
         "ParameterKey": "QSS3BucketName",
