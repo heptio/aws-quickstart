@@ -1,4 +1,14 @@
-# Quickstart New Image Playbook
+# Quickstart Release Guide
+
+## Purpose
+
+This guide will walk you through creating a new release of Quickstart, starting
+with creating a new golden AMI image. This procedure should be used for new releases
+of Kubernetes, OS-level security patches, and any other updates that require a new
+image. 
+
+## Playbook
+
 
 ### 1. Build a new AMI using wardroom
 
@@ -7,8 +17,8 @@ the quickstart. The first step in a new quickstart image is building the image
 in Wardroom.
 
 * Checkout [`github.com/heptiolabs/wardroom`][wardroom].
-* You'll need Amazon creds in the environment. I recommend [aws-vault][vault].
-  If you use vault, preface the following commands with something like
+* You'll need Amazon creds in the environment. [aws-vault][vault] is useful for
+  this. If you use vault, preface the following commands with something like
   `aws-vault exec <profile name> --`
 * Make you are on a clean tree, preferably the origin's `master`.
   ```
@@ -47,8 +57,8 @@ and make it public.
 * Again, Wardroom has [more detailed instructions][packer], but the basic
   pattern is `python3 setup.py install` in the packer directory. Then `copy-ami
   -i ami-78476f02 -r us-east-1`.
-* This process takes quite a while. Before too long, though, it's gonna spit out
-  some YAML. Move onto the next step with this YAML.
+* This process takes quite a while. However, early on it will emit
+  some YAML which can be used in Step 3.
 
 [packer]: https://github.com/heptiolabs/wardroom/tree/master/packer#building-images
 
@@ -88,7 +98,7 @@ sonobuoy run. Unfortunately, you'll have to set this up yourself.
 * Find the `GetKubeConfigCommand` output, and copy it to a terminal. Sub in your
   private key pair and run the command to get a kubeconig.
 * Validate your new config with `KUBECONFIG=./kubeconfig kubectl get nodes`.
-* Go to [scanner][scanner] and get a manieg
+* Go to [scanner][scanner] and get a manifest.
 * Apply it with your new config: `KUBECONFIG=./kubeconfig kubectl apply -f
   https://scanner.heptio.com/...`
 * Go get some coffee. This'll be a while.
@@ -105,4 +115,6 @@ repo][amazon].
 
 * Open a PR from Heptio's repo to the [Amazon repo][amazon]. Important: PRs
   should be sent to the `develop` branch, not the `master` branch.
+
+[amazon]: https://github.com/aws-quickstart/quickstart-heptio
 
