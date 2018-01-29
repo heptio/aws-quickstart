@@ -118,3 +118,33 @@ repo][amazon].
 
 [amazon]: https://github.com/aws-quickstart/quickstart-heptio
 
+### 7. Certify the Cluster
+
+Once Amazon has merged the PR, you can certify the cluster. Certification gets
+us a badge that says we're [Certified Kubernetes][certify].
+
+* The main instructions here are in the [`k8s-conformance` repo][certify]. This
+  is the short version.
+* Boot a new cluster using the official [AWS Quickstart][quickstart] site.
+* Set up kubectl using the "outputs" command as in step 5
+* Once it's booted, run the Sonobuoy command on it. `curl -L
+  https://raw.githubusercontent.com/cncf/k8s-conformance/master/sonobuoy-conformance.yaml
+  | kubectl apply -f -`.
+* Tail the logs with `KUBECONFIG=./kubeconfig kubectl logs -f -n sonobuoy
+  sonobuoy`
+* Wait for `MSG="no-exit was specified, sonobuoy is now blocking"`
+* Once it's complete, copy the file off with `kubectl cp
+  heptio-sonobuoy/sonobuoy:/tmp/sonobuoy ./archive`. The exact filename will be
+  different, check the logs.
+* Clone the [conformance repo][certify].
+* extract the file and copy `plugins/e2e/results/e2e.log` and
+  `plugins/e2e/results/junit_01.xml` into the heptio directory in the
+  conformance repo for the version of k8s you've tested. If the heptio directory doesn't exist yet,
+  you can use the previous version as a template.
+* Send a pull request to the repo [according to the official instructions][instructions]
+
+
+[certify]: https://github.com/cncf/k8s-conformance
+[quickstart]: https://aws.amazon.com/quickstart/architecture/heptio-kubernetes/
+[instructions]: https://github.com/cncf/k8s-conformance/blob/master/instructions.md#uploading
+
