@@ -1,4 +1,4 @@
-![AWS Quick Start for Kubernets](images/banner.jpg)
+![AWS Quick Start for Kubernets](images/banner.jpg) 
 
 # Heptio AWS Quickstart
 
