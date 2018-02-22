@@ -51,7 +51,8 @@ aws cloudformation create-stack \
 
 ### Deploying latest master
 
-If you want to try changes from this repository before they are released into AWS's Quick Start page, just change the Template URL, `QSS3BucketName`, and `QSS3KeyPrefix` to their development equivalents.
+You can try changes from this repository before they are released on the AWS Quick Start page using the [AWS Console](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?param_QSS3BucketName=heptio-aws-quickstart-s3-test&param_QSS3KeyPrefix=heptio%2Fkubernetes%2Fmaster&stackName=Heptio-Kubernetes&templateURL=https:%2F%2Fheptio-aws-quickstart-test.s3.amazonaws.com%2Fheptio%2Fkubernetes%2Fmaster%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template)
+or using the AWS cli:
 
 ```
 # This is where Heptio stores templates/scripts for the master branch of this repository
