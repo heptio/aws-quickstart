@@ -72,9 +72,6 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 # Grant the "admin" user complete access to the cluster
 kubectl create clusterrolebinding admin-cluster-binding --clusterrole=cluster-admin --user=admin
 
-# Label this node as a master
-kubectl label node "${HOSTNAME}" "kubernetes.io/role=master"
-
 # Add-on for networking providers, so pods can communicate.  see the scripts/
 # directory of the quickstart.  Currently either calico.yaml or weave.yaml
 kubectl apply -f {{NetworkingProviderUrl}}
