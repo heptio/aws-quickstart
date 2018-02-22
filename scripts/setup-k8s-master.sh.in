@@ -25,6 +25,7 @@ set -o pipefail
 test -n "{{LoadBalancerDns}}"
 test -n "{{LoadBalancerName}}"
 test -n "{{ClusterToken}}"
+test -n "{{NetworkingProvider}}"
 test -n "{{NetworkingProviderUrl}}"
 test -n "{{DashboardUrl}}"
 test -n "{{StorageClassUrl}}"
@@ -53,6 +54,13 @@ apiServerCertSANs:
 - ${LB_DNS}
 EOF
 
+if [[ "{{NetworkingProvider}}" == "calico" ]]; then
+cat >>/tmp/kubeadm.yaml <<EOF
+networking:
+  podSubnet: 192.168.0.0/16
+EOF
+fi
+
 # Initialize master node
 kubeadm init --config /tmp/kubeadm.yaml
 rm /tmp/kubeadm.yaml
@@ -63,9 +71,6 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 
 # Grant the "admin" user complete access to the cluster
 kubectl create clusterrolebinding admin-cluster-binding --clusterrole=cluster-admin --user=admin
-
-# Label this node as a master
-kubectl label node "${HOSTNAME}" "kubernetes.io/role=master"
 
 # Add-on for networking providers, so pods can communicate.  see the scripts/
 # directory of the quickstart.  Currently either calico.yaml or weave.yaml

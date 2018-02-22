@@ -5,7 +5,7 @@ RUN apk update && apk add --no-cache curl
 # curl kubectl instead of ADD'ing it, since we want to cache the layer
 RUN curl -sfL \
       -o /usr/local/bin/kubectl \
-      https://storage.googleapis.com/kubernetes-release/release/v1.8.2/bin/linux/amd64/kubectl && \
+      https://storage.googleapis.com/kubernetes-release/release/v1.9.3/bin/linux/amd64/kubectl && \
     chmod +x /usr/local/bin/kubectl
 
 RUN apk add --no-cache \
