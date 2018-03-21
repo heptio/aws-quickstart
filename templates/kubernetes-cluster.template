@@ -53,6 +53,7 @@ Metadata:
       Parameters:
       - K8sNodeCapacity
       - NetworkingProvider
+      - ClusterDNSProvider
     - Label:
         default: Advanced
       Parameters:
@@ -91,6 +92,8 @@ Metadata:
         default: Load Balancer Subnet
       LoadBalancerType:
         default: Load Balancer Type
+      ClusterDNSProvider:
+        default: Cluster DNS Provider
 
 
 # The Parameters allow the user to pass custom settings to the stack before creation
@@ -279,6 +282,16 @@ Parameters:
       and weave (https://github.com/weaveworks/weave/blob/master/site/kubernetes/kube-addon.md).
     Type: String
 
+  ClusterDNSProvider:
+    AllowedValues:
+    - CoreDNS
+    - KubeDNS
+    ConstraintDescription: 'Currently supported values are "CoreDNS" and "KubeDNS"'
+    Default: CoreDNS
+    Description: Choose the cluster DNS provider to use for internal cluster DNS. Supported
+      configurations are CoreDNS and KubeDNS
+    Type: String
+
 # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 Mappings:
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
@@ -394,6 +407,7 @@ Resources:
                 LoadBalancerDns: !GetAtt ApiLoadBalancer.DNSName
                 LoadBalancerName: !Ref ApiLoadBalancer
                 ClusterToken: !GetAtt KubeadmToken.Token
+                ClusterDNSProvider: !Ref ClusterDNSProvider
                 NetworkingProvider: !Ref NetworkingProvider
                 NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
                 DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/dashboard.yaml"

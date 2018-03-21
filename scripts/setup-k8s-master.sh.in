@@ -32,6 +32,7 @@ test -n "{{StorageClassUrl}}"
 test -n "{{NetworkPolicyUrl}}"
 test -n "{{Region}}"
 test -n "{{ClusterInfoBucket}}"
+test -n "{{ClusterDNSProvider}}"
 
 # kubeadm wants lowercase for DNS (as it probably should)
 LB_DNS=$(echo "{{LoadBalancerDns}}" | tr 'A-Z' 'a-z')
@@ -53,6 +54,12 @@ tokenTTL: 0s
 apiServerCertSANs:
 - ${LB_DNS}
 EOF
+
+# Feature gates
+echo "featureGates:" >> /tmp/kubeadm.yaml
+if [[ "{{ClusterDNSProvider}}" == "coredns" ]]; then
+  echo "  CoreDNS = True" >> /tmp/kubeadm.yaml
+fi
 
 if [[ "{{NetworkingProvider}}" == "calico" ]]; then
 cat >>/tmp/kubeadm.yaml <<EOF
