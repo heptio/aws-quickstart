@@ -1,4 +1,4 @@
-# Snapshotted from https://raw.githubusercontent.com/kubernetes/dashboard/v1.8.2/src/deploy/recommended/kubernetes-dashboard.yaml
+# Snapshotted from https://raw.githubusercontent.com/kubernetes/dashboard/v1.8.3/src/deploy/recommended/kubernetes-dashboard.yaml
 #
 # Copyright 2017 The Kubernetes Authors.
 #
@@ -116,7 +116,7 @@ spec:
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: k8s.gcr.io/kubernetes-dashboard-amd64:v1.8.2
+        image: k8s.gcr.io/kubernetes-dashboard-amd64:v1.8.3
         ports:
         - containerPort: 8443
           protocol: TCP
@@ -150,6 +150,8 @@ spec:
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
 
 ---
 # ------------------- Dashboard Service ------------------- #
