@@ -57,8 +57,8 @@ EOF
 
 # Feature gates
 echo "featureGates:" >> /tmp/kubeadm.yaml
-if [[ "{{ClusterDNSProvider}}" == "coredns" ]]; then
-  echo "  CoreDNS = True" >> /tmp/kubeadm.yaml
+if [[ "{{ClusterDNSProvider}}" == "CoreDNS" ]]; then
+  echo "  CoreDNS: True" >> /tmp/kubeadm.yaml
 fi
 
 if [[ "{{NetworkingProvider}}" == "calico" ]]; then
