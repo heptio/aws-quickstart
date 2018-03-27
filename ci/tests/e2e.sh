@@ -158,10 +158,10 @@ kubectl cp heptio-sonobuoy/sonobuoy:/tmp/sonobuoy /tmp/results
     exit $ERRCODE_FAILURE
   fi
 
-  if tail -1 ./plugins/e2e/results/e2e.log | grep -q SUCCESS; then
+  if tail -1 ./plugins/e2e/results/e2e.log | grep -q 'Test Suite Passed'; then
     echo "Sonobuoy e2e plugin run successfully."
   else
-    echo "Sonobuoy e2e plugin was not succeessful. Log:"
+    echo "Sonobuoy e2e plugin was not successful. Log:"
     cat ./plugins/e2e/results/e2e.log
     exit $ERRCODE_FAILURE
   fi
