@@ -40,6 +40,7 @@ Metadata:
     - Label:
         default: Advanced
       Parameters:
+      - ClusterDNSProvider
       - NetworkingProvider
       - K8sNodeCapacity
       - InstanceType
@@ -69,6 +70,8 @@ Metadata:
         default: S3 Key Prefix
       NetworkingProvider:
         default: Networking Provider
+      ClusterDNSProvider:
+        default: Cluster DNS Provider
 
 # The Parameters allow the user to pass custom settings to the stack before creation
 Parameters:
@@ -273,6 +276,16 @@ Parameters:
       pods in the Kubernetes cluster. Supported configurations are calico
       (https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/)
       and weave (https://github.com/weaveworks/weave/blob/master/site/kubernetes/kube-addon.md).
+    Type: String
+
+  ClusterDNSProvider:
+    AllowedValues:
+    - CoreDNS
+    - KubeDNS
+    ConstraintDescription: 'Currently supported values are "CoreDNS" and "KubeDNS"'
+    Default: CoreDNS
+    Description: Choose the cluster DNS provider to use for internal cluster DNS. Supported
+      configurations are CoreDNS and KubeDNS
     Type: String
 
 Mappings:
@@ -524,6 +537,7 @@ Resources:
         ClusterAssociation: !Ref AWS::StackName
         NetworkingProvider: !Ref NetworkingProvider
         LoadBalancerSubnetId: !Ref PublicSubnet
+        ClusterDNSProvider: !Ref ClusterDNSProvider
 
 Outputs:
   # Outputs from VPC creation
