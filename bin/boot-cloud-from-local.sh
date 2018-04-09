@@ -19,8 +19,8 @@ aws s3api head-bucket --bucket "${S3_BUCKET}"
 S3_PREFIX="${S3_PREFIX:-test-local}"
 
 # Where to place your cluster
-REGION="${REGION:-us-west-1}"
-AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-1a}"
+REGION="${REGION:-us-west-2}"
+AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-2a}"
 
 # Which CNI provider you want weave/calico
 CNI="${CNI:-calico}"
