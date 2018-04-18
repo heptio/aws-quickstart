@@ -23,5 +23,4 @@
         "ParameterKey": "QSS3KeyPrefix",
         "ParameterValue": "quickstart-heptio-kubernetes/"
     }
-
 ]
