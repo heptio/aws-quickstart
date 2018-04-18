@@ -244,7 +244,7 @@ Parameters:
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
 
-    Default: quickstart-reference
+    Default: aws-quickstart
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
       scripts from the scripts/ and templates/ directories of your own fork of the Heptio
@@ -255,11 +255,10 @@ Parameters:
     Type: String
 
   QSS3KeyPrefix:
-    AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
-    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
-      uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
-      with forward slash (/) because they are automatically appended.
-    Default: heptio/latest
+    AllowedPattern: ^[0-9a-zA-Z-/]*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters, uppercase 
+      letters, hyphens (-), and forward slash (/).
+    Default: quickstart-heptio/
     Description: Only change this if you have set up assets in an S3 bucket, as explained
       in the S3 Bucket parameter. The S3 key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slashes (/). It cannot start or end with
@@ -491,7 +490,7 @@ Resources:
             #!/bin/bash
 
             BASTION_BOOTSTRAP_FILE=bastion_bootstrap.sh
-            BASTION_BOOTSTRAP=https://s3.amazonaws.com/quickstart-reference/linux/bastion/latest/scripts/bastion_bootstrap.sh
+            BASTION_BOOTSTRAP=https://s3.amazonaws.com/aws-quickstart/quickstart-linux-bastion/scripts/bastion_bootstrap.sh
 
             curl -s -o $BASTION_BOOTSTRAP_FILE $BASTION_BOOTSTRAP
             chmod +x $BASTION_BOOTSTRAP_FILE
@@ -500,7 +499,7 @@ Resources:
             apt-get -y update && apt-get -y install python-pip
             pip install --upgrade pip &> /dev/null
 
-            ./$BASTION_BOOTSTRAP_FILE --banner https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/banner_message.txt --enable true
+            ./$BASTION_BOOTSTRAP_FILE --banner https://s3.amazonaws.com/aws-quickstart/quickstart-linux-bastion/scripts/banner_message.txt --enable true
 
   # Open up port 22 for SSH for the bastion host
   BastionSecurityGroup:
@@ -520,7 +519,7 @@ Resources:
   K8sStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/kubernetes-cluster.template"
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/kubernetes-cluster.template"
       Parameters:
         VPCID: !Ref VPC
         AvailabilityZone: !Ref AvailabilityZone

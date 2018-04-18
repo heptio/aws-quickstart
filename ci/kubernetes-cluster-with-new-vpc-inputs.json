@@ -1,0 +1,18 @@
+[
+    {
+        "ParameterKey": "AvailabilityZone",
+        "ParameterValue": "$[taskcat_genaz_1]"
+    },
+    {
+        "ParameterKey": "AdminIngressLocation",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "tonynv"
+    },
+    {
+        "ParameterKey": "QSS3BucketName",
+        "ParameterValue": "$[taskcat_autobucket]"
+    }
+]
