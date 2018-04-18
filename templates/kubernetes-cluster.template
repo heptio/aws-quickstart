@@ -371,15 +371,15 @@ Resources:
           files:
             # Script that will allow for development kubernetes binaries to replace the pre-packaged AMI binaries.
             "/tmp/kubernetes-override-binaries.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-override-binaries.sh.in"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
               mode: '000755'
               context:
-                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/bin/"
+                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}bin/"
 
             # Configuration file for the cloudwatch agent. The file is a Mustache template, and we're creating it with
             # the below context (mainly to substitute in the AWS Stack Name for the logging group.)
             "/tmp/kubernetes-awslogs.conf":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
               context:
                 StackName: !Ref AWS::StackName
 
@@ -390,17 +390,17 @@ Resources:
 
             # systemd init script for the Cloudwatch logs agent
             "/etc/systemd/system/awslogs.service":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/awslogs.service"
 
             # setup kubelet hostname
             "/tmp/setup-kubelet-hostname.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-kubelet-hostname.sh"
               mode: '000755'
 
             # Setup script for initializing the Kubernetes master instance.  This is where most of the cluster
             # initialization happens.  See scripts/setup-k8s-master.sh in the Quick Start repo for details.
             "/tmp/setup-k8s-master.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-k8s-master.sh.in"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-k8s-master.sh.in"
               mode: '000755'
               context:
                 LoadBalancerDns: !GetAtt ApiLoadBalancer.DNSName
@@ -408,10 +408,10 @@ Resources:
                 ClusterToken: !GetAtt KubeadmToken.Token
                 ClusterDNSProvider: !Ref ClusterDNSProvider
                 NetworkingProvider: !Ref NetworkingProvider
-                NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/${NetworkingProvider}.yaml"
-                DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/dashboard.yaml"
-                StorageClassUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/default.storageclass.yaml"
-                NetworkPolicyUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/network-policy.yaml"
+                NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/${NetworkingProvider}.yaml"
+                DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/dashboard.yaml"
+                StorageClassUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/default.storageclass.yaml"
+                NetworkPolicyUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/network-policy.yaml"
                 ClusterInfoBucket: !Ref ClusterInfoBucket
                 Region: !Ref AWS::Region
 
@@ -659,25 +659,25 @@ Resources:
           # (See comments in the master instance Metadata for details.)
           files:
             "/tmp/kubernetes-override-binaries.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-override-binaries.sh.in"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
               mode: '000755'
               context:
-                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/bin/"
+                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}bin/"
             "/tmp/kubernetes-awslogs.conf":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/kubernetes-awslogs.conf"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
               context:
                 StackName: !Ref AWS::StackName
             "/usr/local/aws/awslogs-agent-setup.py":
               source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
               mode: '000755'
             "/etc/systemd/system/awslogs.service":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/awslogs.service"
             "/tmp/setup-kubelet-hostname.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-kubelet-hostname.sh"
               mode: '000755'
             "/tmp/setup-k8s-node.sh":
               mode: '000755'
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-k8s-node.sh.in"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-k8s-node.sh.in"
               context:
                 K8sMasterPrivateIp: !GetAtt K8sMasterInstance.PrivateIp
                 ClusterToken: !GetAtt KubeadmToken.Token
