@@ -1,11 +1,11 @@
 [
     {
         "ParameterKey": "AvailabilityZone",
-        "ParameterValue": "$[alfred_getaz_1]"
+        "ParameterValue": "$[taskcat_genaz_1]"
     },
     {
         "ParameterKey": "AdminIngressLocation",
-        "ParameterValue": "1.2.3.4/32"
+        "ParameterValue": "0.0.0.0/0"
     },
     {
         "ParameterKey": "KeyName",
@@ -17,11 +17,11 @@
     },
     {
         "ParameterKey": "QSS3BucketName",
-        "ParameterValue": "heptio-aws-quickstart-test"
+        "ParameterValue": "$[taskcat_autobucket]"
     },
     {
         "ParameterKey": "QSS3KeyPrefix",
-        "ParameterValue": "heptio/kubernetes/latest"
+        "ParameterValue": "quickstart-heptio-kubernetes/"
     }
 
 ]
