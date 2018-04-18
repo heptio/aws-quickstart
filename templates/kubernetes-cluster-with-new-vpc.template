@@ -244,7 +244,7 @@ Parameters:
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
 
-    Default: quickstart-reference
+    Default: aws-quickstart
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
       scripts from the scripts/ and templates/ directories of your own fork of the Heptio
@@ -259,7 +259,7 @@ Parameters:
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
       with forward slash (/) because they are automatically appended.
-    Default: heptio/latest
+    Default: quickstart-heptio/
     Description: Only change this if you have set up assets in an S3 bucket, as explained
       in the S3 Bucket parameter. The S3 key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slashes (/). It cannot start or end with
