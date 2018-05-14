@@ -37,7 +37,7 @@ test -n "{{ClusterDNSProvider}}"
 # kubeadm wants lowercase for DNS (as it probably should)
 LB_DNS=$(echo "{{LoadBalancerDns}}" | tr 'A-Z' 'a-z')
 
-HOSTNAME="$(hostname -f)"
+HOSTNAME="$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)"
 
 # reset kubeadm (workaround for kubelet package presence)
 kubeadm reset
