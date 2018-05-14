@@ -8,6 +8,8 @@ This can occur for multiple reasons and often requires investigating logs on the
 
 Once you're able to access the failed kubernetes master the appropriate logs are found in /var/log. The two most important logs are cfn-init.log and cfn-init-cmd.log. These two logs show the cloud formation process in depth.
 
+An alternative place to view the cfn-init-cmd.log is the CloudWatch Logs group `Heptio-Kubernetes-K8sStack-<stack identifier number>`. This log group is automatically created by the CloudFormation template. This CloudWatch logs group contains the live cloud-init-cmd.log file. This log file is available from the the nodes we provision minus the bastion host. This logs group is automatically removed when a rollback or deletion of the stack is done.
+
 ## Quick Start CloudFormation Stack Does Not Delete Properly
 
 This is typically caused when certain additional resources are created inside the stack's VPC, like Elastic Load Balancers.  Kubernetes creates these when you create a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) with `type: LoadBalancer`.
