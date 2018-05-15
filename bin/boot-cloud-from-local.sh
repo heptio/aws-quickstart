@@ -31,7 +31,7 @@ STACK="${STACK:-my-k8s-cluster}"
 # What SSH key you want to allow access to the cluster (must be created ahead of time in your AWS EC2 account)
 KEYNAME="${KEYNAME:-laptop}"
 
-INSTANCE_TYPE="${INSTANCE_TYPE:-m5.large}"
+INSTANCE_TYPE="${INSTANCE_TYPE:-m4.large}"
 
 # What IP addresses should be able to connect over SSH and over the Kubernetes API
 INGRESS=0.0.0.0/0
