@@ -1068,7 +1068,7 @@ Outputs:
 
   JoinNodes:
     Description: Command to join more nodes to this cluster.
-    Value: !Sub "aws cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --node-name=\"$(hostname -f)\" --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
+    Value: !Sub "aws cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --node-name=\"$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)\" --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
