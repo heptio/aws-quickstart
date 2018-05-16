@@ -560,6 +560,13 @@ Resources:
       Timeout: "5"
       Role: !GetAtt LambdaExecutionRole.Arn
 
+  # A log group to expire lambda logs
+  GenKubeadmTokenLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GenKubeadmToken]]
+
   # A Custom resource that uses the lambda function to generate our cluster token
   KubeadmToken:
     Type: "Custom::GenerateToken"
@@ -1048,6 +1055,12 @@ Resources:
     Properties:
       ServiceToken: !GetAtt CleanupClusterInfo.Arn
 
+  # A log group to expire CleanupClusterInfo logs
+  CleanupClusterInfoLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref CleanupClusterInfo]]
 
 # Outputs are what AWS will show you after stack creation
 # Generally they let you easily access some information about the stack
