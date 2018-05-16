@@ -16,7 +16,7 @@ S3_BUCKET="${S3_BUCKET:-quickstart-heptio-com}"
 aws s3api head-bucket --bucket "${S3_BUCKET}"
 
 # Where "path/to/your/files" is the directory in S3 under which the templates and scripts directories will be placed
-S3_PREFIX="${S3_PREFIX:-test-local}"
+S3_PREFIX="${S3_PREFIX:-test-local/}"
 
 # Where to place your cluster
 REGION="${REGION:-us-west-2}"
