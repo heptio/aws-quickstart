@@ -17,7 +17,6 @@
     },
     {
         "ParameterKey": "QSS3KeyPrefix",
-        "ParameterValue": "heptio/kubernetes/latest"
+        "ParameterValue": "heptio/kubernetes/latest/"
     }
-
 ]
