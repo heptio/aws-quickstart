@@ -1,6 +1,6 @@
 FROM alpine:3.7
 
-ENV SONOBUOY_VERSION=0.11.2
+ENV SONOBUOY_VERSION=0.11.3
 
 RUN apk update && apk add --no-cache curl
 
@@ -24,9 +24,6 @@ RUN apk add --no-cache \
     bind-tools \
     tar \
     && pip3 install awscli boto3
-
-# This is a stop gap until we disable CGO in sonobuoy
-RUN apk add --no-cache libc6-compat && mkdir -p /lib64
 
 RUN curl -sfL -o sonobuoy.tar.gz https://github.com/heptio/sonobuoy/releases/download/v${SONOBUOY_VERSION}/sonobuoy_${SONOBUOY_VERSION}_linux_amd64.tar.gz && \
     tar -xzf sonobuoy.tar.gz && \
