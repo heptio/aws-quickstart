@@ -5,10 +5,9 @@
 This guide will walk you through creating a new release of Quickstart, starting
 with creating a new golden AMI image. This procedure should be used for new releases
 of Kubernetes, OS-level security patches, and any other updates that require a new
-image. 
+image.
 
 ## Playbook
-
 
 ### 1. Build a new AMI using wardroom
 
@@ -21,17 +20,18 @@ in Wardroom.
   this. If you use vault, preface the following commands with something like
   `aws-vault exec <profile name> --`
 * Make you are on a clean tree, preferably the origin's `master`.
-  ```
+
+  ```sh
   $ git status
   On branch master
   Your branch is up to date with 'origin/master'.
 
   nothing to commit, working tree clean
   ```
+
 * Build the Packer image. [The repo has detailed instructions][packer], but the
-  basic command is something like `packer build -var-file us-east-1.json -var
-  kubernetes_version=1.9.2-00 -var kubernetes_cni_version=0.6.0-00 -var
-  build_version=$(git rev-parse HEAD) -only ami-ubuntu-16.04 packer.json`.
+  basic command is something like `packer build -var-file aws-us-east-1.json -var
+  build_version=$(git rev-parse HEAD) -only ami-ubuntu packer.json`.
 * Boot an instance with the image you created, just to verify that everything
   worked. If you have the [`aws` cli][aws], you can run something like: `aws
   ec2 run-instances --image-id <your ami ID> --instance-type t1.micro --region
@@ -48,21 +48,20 @@ in Wardroom.
 [packer]: https://github.com/heptiolabs/wardroom/tree/master/packer#building-images
 [aws]: https://aws.amazon.com/cli/
 
-
-### 2. Publish the AMIs. 
+### 2. Publish the AMIs
 
 Once you're happy with your AMI, it's time to copy the AMI to the other regions
 and make it public.
 
 * Again, Wardroom has [more detailed instructions][packer], but the basic
-  pattern is `python3 setup.py install` in the packer directory. Then `copy-ami
-  -i ami-78476f02 -r us-east-1`.
+  pattern is `python3 setup.py install` in the repository root directory.
+  Then `wardroom aws copy-ami -r us-east-1 ami-78476f02`.
 * This process takes quite a while. However, early on it will emit
   some YAML which can be used in Step 3.
 
-[packer]: https://github.com/heptiolabs/wardroom/tree/master/packer#building-images
+[packer]: https://github.com/heptiolabs/wardroom/blob/master/packer/README.md#aws
 
-### 3. Update the Quickstart template.
+### 3. Update the Quickstart template
 
 Now that you have the new AMIs, you'll need to tell Quickstart about it.
 
@@ -73,7 +72,8 @@ Now that you have the new AMIs, you'll need to tell Quickstart about it.
 
 [template]: https://github.com/heptio/aws-quickstart/blob/master/templates/kubernetes-cluster.template#L309
 [wardroom]: https://github.com/heptio/aws-quickstart/blob/master/wardroom.json
-### 4. PR the changes. 
+
+### 4. PR the changes
 
 The CI for `aws-quickstart` serves two purposes. One, it will validate the
 information in [`wardroom.json`][wardroom] is present and correct in all AMIs.
@@ -83,7 +83,7 @@ Don't move on to the next step until both tests pass.
 
 [wardroom]: https://github.com/heptio/aws-quickstart/blob/master/wardroom.json
 
-### 5. Manually boot a cloud and do a full Sonobuoy run against it.
+### 5. Manually boot a cloud and do a full Sonobuoy run against it
 
 The smoke test is good, but before a full release is done there should be a full
 sonobuoy run. Unfortunately, you'll have to set this up yourself.
@@ -108,7 +108,7 @@ sonobuoy run. Unfortunately, you'll have to set this up yourself.
 [testing]: https://github.com/heptio/aws-quickstart#testing-local-changes
 [scanner]: https://scanner.heptio.com/
 
-### 6. Send a PR to Amazon.
+### 6. Send a PR to Amazon
 
 The way the quickstart makes its way to Amazon is by PRing to Amazon's [upstream
 repo][amazon].
@@ -143,8 +143,6 @@ us a badge that says we're [Certified Kubernetes][certify].
   you can use the previous version as a template.
 * Send a pull request to the repo [according to the official instructions][instructions]
 
-
 [certify]: https://github.com/cncf/k8s-conformance
 [quickstart]: https://aws.amazon.com/quickstart/architecture/heptio-kubernetes/
 [instructions]: https://github.com/cncf/k8s-conformance/blob/master/instructions.md#uploading
-
