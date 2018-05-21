@@ -26,7 +26,7 @@ export ERRCODE_FAILURE=1
 export ERRCODE_TIMEOUT=10
 
 if [[ "$(whoami)" != "root" ]] || ! grep -q Alpine /etc/issue 2>/dev/null; then
-    echo "This script is must be run in a docker container (and will make changes to the filesystem). Exiting."
+    echo "This script must be run in a docker container (and will make changes to the filesystem). Exiting."
     exit 1
 fi
 
@@ -55,10 +55,7 @@ chmod 0600 $SSH_KEY
 
 aws --version >/dev/null
 kubectl version --client >/dev/null
-mkdir -p /tmp/ci/sonobuoy
-
-curl -sfL -o /tmp/ci/sonobuoy/sonobuoy.yaml \
-      https://raw.githubusercontent.com/heptio/sonobuoy/v0.10.0/examples/quickstart.yaml
+sonobuoy version >/dev/null
 
 aws s3 sync --acl=public-read --delete ./templates "s3://${S3_BUCKET}/${S3_PREFIX}/templates/"
 aws s3 sync --acl=public-read --delete ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}/scripts/"
@@ -127,8 +124,8 @@ export KUBECONFIG=/tmp/kubeconfig
 kubectl config set-context heptio-sonobuoy --cluster kubernetes --user admin --namespace heptio-sonobuoy
 kubectl config use-context heptio-sonobuoy
 
-# These files should have been included in a docker build
-kubectl apply -f /tmp/ci/sonobuoy/sonobuoy.yaml
+# sonobuoy provided by the Dockerfile
+sonobuoy run --mode=quick
 
 echo "Waiting for sonobuoy to complete"
 tries=0
