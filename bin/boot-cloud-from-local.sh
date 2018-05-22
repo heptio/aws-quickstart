@@ -37,13 +37,13 @@ INSTANCE_TYPE="${INSTANCE_TYPE:-m5.large}"
 INGRESS=0.0.0.0/0
 
 # Copy the files from your local directory into your S3 bucket
-aws s3 sync --acl=public-read ./templates "s3://${S3_BUCKET}/${S3_PREFIX}/templates/"
-aws s3 sync --acl=public-read ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}/scripts/"
+aws s3 sync --acl=public-read ./templates "s3://${S3_BUCKET}/${S3_PREFIX}templates/"
+aws s3 sync --acl=public-read ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}scripts/"
 
 aws cloudformation create-stack \
   --region "${REGION}" \
   --stack-name "${STACK}" \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue="${AVAILABILITY_ZONE}" \
     ParameterKey=KeyName,ParameterValue="${KEYNAME}" \
