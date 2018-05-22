@@ -57,15 +57,15 @@ aws --version >/dev/null
 kubectl version --client >/dev/null
 sonobuoy version >/dev/null
 
-aws s3 sync --acl=public-read --delete ./templates "s3://${S3_BUCKET}/${S3_PREFIX}/templates/"
-aws s3 sync --acl=public-read --delete ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}/scripts/"
+aws s3 sync --acl=public-read --delete ./templates "s3://${S3_BUCKET}/${S3_PREFIX}templates/"
+aws s3 sync --acl=public-read --delete ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}scripts/"
 
 # TODO: maybe do a calico test and a weave test as separate runs
 aws cloudformation create-stack \
   --disable-rollback \
   --region "${REGION}" \
   --stack-name "${STACK_NAME}" \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
   ParameterKey=AvailabilityZone,ParameterValue="${AZ}" \
   ParameterKey=KeyName,ParameterValue="${SSH_KEY_NAME}" \
