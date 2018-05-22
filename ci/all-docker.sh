@@ -32,7 +32,7 @@ fi
 AZ="${AZ:-us-west-2c}"
 REGION="${REGION:-us-west-2}"
 S3_BUCKET="${S3_BUCKET:-"heptio-ci-aws-quickstart"}"
-S3_PREFIX="${S3_PREFIX:-$STACK_NAME}/"
+S3_PREFIX="${S3_PREFIX:-${STACK_NAME}/}"
 
 # Build the docker image
 IMAGE_NAME="aws-quickstart-ci-${STACK_NAME}"

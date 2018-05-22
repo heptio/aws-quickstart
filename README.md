@@ -60,7 +60,7 @@ You can also use the AWS cli:
 ```
 # This is where Heptio stores templates/scripts for the master branch of this repository
 S3_BUCKET=heptio-aws-quickstart-test
-S3_PREFIX=heptio/kubernetes/master
+S3_PREFIX=heptio/kubernetes/master/
 
 # Where to place your cluster
 REGION=us-west-2
@@ -78,7 +78,7 @@ INGRESS=0.0.0.0/0
 aws cloudformation create-stack \
   --region $REGION \
   --stack-name $STACK \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue=$AZ \
     ParameterKey=KeyName,ParameterValue=$KEYNAME \
@@ -102,7 +102,7 @@ To deploy your own changes manually from source, you'll need to upload the conte
 
 If you're making changes to things like the Kubernetes version or anything installed in the base AMI, you'll also need to rebuild the AMI with [Wardroom][wardroom].  See the "Local development" section below for more details.
 
-Optionally, aws-quickstart also supports overriding a few select kubernetes binaries (kubelet, kubeadm, kubectl) at runtime for development purposes.  To replace these binaries at runtime, simply place your custom versions into the `$S3_PREFIX/bin/` folder:
+Optionally, aws-quickstart also supports overriding a few select kubernetes binaries (kubelet, kubeadm, kubectl) at runtime for development purposes.  To replace these binaries at runtime, simply place your custom versions into the `${S3_PREFIX}bin/` folder:
 ```
 $ aws s3 ls s3://quickstart/overrides/bin/
 2017-09-08 13:04:02   71453136 kubeadm
@@ -117,7 +117,7 @@ An example deployment:
 S3_BUCKET=your-s3-bucket
 
 # Where "path/to/your/files" is the directory in S3 under which the templates and scripts directories will be placed
-S3_PREFIX=path/to/your/files
+S3_PREFIX=path/to/your/files/
 
 # Where to place your cluster
 REGION=us-west-2
@@ -133,13 +133,13 @@ KEYNAME=mykey
 INGRESS=0.0.0.0/0
 
 # Copy the files from your local directory into your S3 bucket
-aws s3 sync --acl=public-read ./templates s3://${S3_BUCKET}/${S3_PREFIX}/templates/
-aws s3 sync --acl=public-read ./scripts s3://${S3_BUCKET}/${S3_PREFIX}/scripts/
+aws s3 sync --acl=public-read ./templates s3://${S3_BUCKET}/${S3_PREFIX}templates/
+aws s3 sync --acl=public-read ./scripts s3://${S3_BUCKET}/${S3_PREFIX}scripts/
 
 aws cloudformation create-stack \
   --region $REGION \
   --stack-name $STACK \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue=$AVAILABILITY_ZONE \
     ParameterKey=KeyName,ParameterValue=$KEYNAME \

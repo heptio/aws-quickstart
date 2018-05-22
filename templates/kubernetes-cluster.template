@@ -416,7 +416,7 @@ Resources:
 
             # patch kube proxy
             "/tmp/patch-kube-proxy.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/patch-kube-proxy.sh"
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/patch-kube-proxy.sh"
               mode: '000755'
 
           commands:
