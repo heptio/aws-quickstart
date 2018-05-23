@@ -392,9 +392,9 @@ Resources:
             "/etc/systemd/system/awslogs.service":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
 
-            # setup kubelet hostname
-            "/tmp/setup-kubelet-hostname.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
+            # setup kubelet args
+            "/tmp/setup-kubelet-args.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-args.sh"
               mode: '000755'
 
             # Setup script for initializing the Kubernetes master instance.  This is where most of the cluster
@@ -425,9 +425,9 @@ Resources:
             # Enable the Cloudwatch service and launch it
             "02-cloudwatch-service-config":
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
-            # Setup kubelet hostname
-            "03-setup-kubelet-hostname":
-              command: "/tmp/setup-kubelet-hostname.sh"
+            # Setup kubelet args
+            "03-setup-kubelet-args":
+              command: "/tmp/setup-kubelet-args.sh"
             # Run the master setup
             "04-master-setup":
               command: "/tmp/setup-k8s-master.sh"
@@ -672,8 +672,8 @@ Resources:
               mode: '000755'
             "/etc/systemd/system/awslogs.service":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/awslogs.service"
-            "/tmp/setup-kubelet-hostname.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-hostname.sh"
+            "/tmp/setup-kubelet-args.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/setup-kubelet-args.sh"
               mode: '000755'
             "/tmp/setup-k8s-node.sh":
               mode: '000755'
@@ -690,8 +690,8 @@ Resources:
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
             "02-cloudwatch-service-config":
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
-            "03-setup-kubelet-hostname":
-              command: "/tmp/setup-kubelet-hostname.sh"
+            "03-setup-kubelet-args":
+              command: "/tmp/setup-kubelet-args.sh"
             "04-k8s-setup-node":
               command: "/tmp/setup-k8s-node.sh"
     Properties:
@@ -1067,7 +1067,7 @@ Outputs:
 
   JoinNodes:
     Description: Command to join more nodes to this cluster.
-    Value: !Sub "aws cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --node-name=\"$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)\" --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
+    Value: !Sub "aws cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
