@@ -415,6 +415,11 @@ Resources:
                 ClusterInfoBucket: !Ref ClusterInfoBucket
                 Region: !Ref AWS::Region
 
+            # patch kube proxy
+            "/tmp/patch-kube-proxy.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/scripts/patch-kube-proxy.sh"
+              mode: '000755'
+
           commands:
             # Override the AMI binaries with any kubelet/kubeadm/kubectl binaries in the S3 bucket
             "00-kubernetes-override-binaries":
@@ -431,6 +436,8 @@ Resources:
             # Run the master setup
             "04-master-setup":
               command: "/tmp/setup-k8s-master.sh"
+            "05-patch-kube-proxy":
+              command: "/tmp/patch-kube-proxy.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZone: !Ref AvailabilityZone
