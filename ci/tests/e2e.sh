@@ -37,19 +37,19 @@ test -n "${AZ}"
 test -n "${REGION}"
 test -n "${S3_BUCKET}"
 test -n "${S3_PREFIX}"
-test -n "${SSH_KEY_NAME}"
-test -n "${SSH_KEY}"
 test -n "${STACK_NAME}"
 
 export AWS_DEFAULT_REGION="${REGION}"
+export SSH_KEY_NAME="${STACK_NAME}-key"
 
 # Setup ssh.  Due to SSH being incredibly paranoid about filesystem permissions
 # we just create our own ssh directory and set it from there.  (This also
 # allows the docker volume mounts to be read-only.)
+out=$(aws ec2  create-key-pair  --region "${REGION}" --key-name "${SSH_KEY_NAME}")
 test ! -e /tmp/qs-ssh/identity
 mkdir -p /tmp/qs-ssh
 chmod 0700 /tmp/qs-ssh
-cp "${SSH_KEY}" /tmp/qs-ssh/identity
+echo -n $out| jq -r '.KeyMaterial' > /tmp/qs-ssh/identity
 export SSH_KEY=/tmp/qs-ssh/identity
 chmod 0600 $SSH_KEY
 
@@ -84,6 +84,7 @@ function cleanup() {
     echo "Deleting cloudformation stack ${STACK_NAME}"
     aws cloudformation delete-stack --stack-name "${STACK_NAME}"
     aws cloudformation wait stack-delete-complete --stack-name "${STACK_NAME}"
+    aws ec2 delete-key-pair --key-name "${SSH_KEY_NAME}" --region "${REGION}"
 }
 trap cleanup EXIT
 
