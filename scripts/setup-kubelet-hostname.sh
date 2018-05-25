@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HOSTNAME="$(hostname -f)"
+HOSTNAME="$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)"
 
 
 # Setting --hostname-override is a workaround for https://github.com/kubernetes/kubeadm/issues/653

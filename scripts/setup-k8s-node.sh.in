@@ -31,7 +31,7 @@ kubeadm reset
 aws s3 cp "s3://{{ClusterInfoBucket}}/cluster-info.yaml" /tmp/cluster-info.yaml
 
 kubeadm join \
-    --node-name="$(hostname -f)" \
+    --node-name="$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)" \
     --token="{{ClusterToken}}" \
     --discovery-file="/tmp/cluster-info.yaml" \
     "{{K8sMasterPrivateIp}}:6443"
