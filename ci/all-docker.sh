@@ -32,9 +32,7 @@ fi
 AZ="${AZ:-us-west-2c}"
 REGION="${REGION:-us-west-2}"
 S3_BUCKET="${S3_BUCKET:-"heptio-ci-aws-quickstart"}"
-S3_PREFIX="${S3_PREFIX:-$STACK_NAME}"
-SSH_KEY="${SSH_KEY:-/tmp/ssh/id_rsa}"
-SSH_KEY_NAME="${SSH_KEY_NAME:-jenkins}"
+S3_PREFIX="${S3_PREFIX:-${STACK_NAME}/}"
 
 # Build the docker image
 IMAGE_NAME="aws-quickstart-ci-${STACK_NAME}"
@@ -52,12 +50,9 @@ docker run --rm \
     -e REGION="${REGION}" \
     -e AZ="${AZ}" \
     -e S3_BUCKET="${S3_BUCKET}" \
-    -e SSH_KEY="/tmp/ssh/$(basename "${SSH_KEY}")" \
-    -e SSH_KEY_NAME="${SSH_KEY_NAME}" \
     -e S3_PREFIX="${S3_PREFIX}" \
     -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
     -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
     -v "$(pwd)":/src \
-    -v "$(dirname "${SSH_KEY}"):/tmp/ssh" \
     "${IMAGE_NAME}" \
     ./ci/all.sh

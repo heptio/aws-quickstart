@@ -2,6 +2,14 @@
 
 In addition to the [documentation](http://docs.heptio.com/content/aws.html) available for the Heptio AWS Quick Start, this page outlines some troubleshooting tips if you're running into issues with your quick start.
 
+## Quick Start CloudFormation Master Does Not Start Properly
+
+This can occur for multiple reasons and often requires investigating logs on the failed master instance. The first hurdle is keeping the failed resources around. The cloud formation default option in AWS is to Rollback on failure. When using the console you can disable this by going to `Advanced` and then setting `Rollback on failure` to `No`.
+
+Once you're able to access the failed kubernetes master the appropriate logs are found in /var/log. The two most important logs are cfn-init.log and cfn-init-cmd.log. These two logs show the cloud formation process in depth.
+
+An alternative place to view the cfn-init-cmd.log is the CloudWatch Logs group `Heptio-Kubernetes-K8sStack-<stack identifier number>`. This log group is automatically created by the CloudFormation template. This CloudWatch logs group contains the live cloud-init-cmd.log file. This log file is available from the the nodes we provision minus the bastion host. This logs group is automatically removed when a rollback or deletion of the stack is done.
+
 ## Quick Start CloudFormation Stack Does Not Delete Properly
 
 This is typically caused when certain additional resources are created inside the stack's VPC, like Elastic Load Balancers.  Kubernetes creates these when you create a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) with `type: LoadBalancer`.
@@ -32,3 +40,13 @@ aws elb describe-load-balancers --query "LoadBalancerDescriptions[?VPCId == \`${
 Then you should be able to delete the CloudFormation stack normally.
 
 **Note**: The process of freeing some of the resources associated with the Load Balancers is asynchronous, so it may take some time before the stack can be fully deleted.
+
+## Deploying into an existing VPC
+
+The initialization step of `kubeadm`, `kubeadm init` requires your node to be
+resolvable via DNS.
+
+If you are deploying this stack into an existing VPC that uses AmazonProvidedDNS
+as the domain name servers, you will have to make sure to add the correct domain
+name as well. If you're running in us-east-1 add `ec2.internal`. Otherwise, add
+`<region>.compute.internal` where `<region> is us-west-2, us-east-2, etc.

@@ -9,8 +9,8 @@ items:
         cloud.weave.works/launcher-info: |-
           {
             "original-request": {
-              "url": "/k8s/v1.8/net.yaml?k8s-version=1.9.2",
-              "date": "Fri Feb 09 2018 18:32:19 GMT+0000 (UTC)"
+              "url": "/k8s/net?k8s-version=1.10.3",
+              "date": "Mon May 21 2018 19:36:02 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -25,14 +25,13 @@ items:
         cloud.weave.works/launcher-info: |-
           {
             "original-request": {
-              "url": "/k8s/v1.8/net.yaml?k8s-version=1.9.2",
-              "date": "Fri Feb 09 2018 18:32:19 GMT+0000 (UTC)"
+              "url": "/k8s/net?k8s-version=1.10.3",
+              "date": "Mon May 21 2018 19:36:02 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
       labels:
         name: weave-net
-      namespace: kube-system
     rules:
       - apiGroups:
           - ''
@@ -60,14 +59,13 @@ items:
         cloud.weave.works/launcher-info: |-
           {
             "original-request": {
-              "url": "/k8s/v1.8/net.yaml?k8s-version=1.9.2",
-              "date": "Fri Feb 09 2018 18:32:19 GMT+0000 (UTC)"
+              "url": "/k8s/net?k8s-version=1.10.3",
+              "date": "Mon May 21 2018 19:36:02 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
       labels:
         name: weave-net
-      namespace: kube-system
     roleRef:
       kind: ClusterRole
       name: weave-net
@@ -84,8 +82,8 @@ items:
         cloud.weave.works/launcher-info: |-
           {
             "original-request": {
-              "url": "/k8s/v1.8/net.yaml?k8s-version=1.9.2",
-              "date": "Fri Feb 09 2018 18:32:19 GMT+0000 (UTC)"
+              "url": "/k8s/net?k8s-version=1.10.3",
+              "date": "Mon May 21 2018 19:36:02 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -116,8 +114,8 @@ items:
         cloud.weave.works/launcher-info: |-
           {
             "original-request": {
-              "url": "/k8s/v1.8/net.yaml?k8s-version=1.9.2",
-              "date": "Fri Feb 09 2018 18:32:19 GMT+0000 (UTC)"
+              "url": "/k8s/net?k8s-version=1.10.3",
+              "date": "Mon May 21 2018 19:36:02 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -140,8 +138,8 @@ items:
         cloud.weave.works/launcher-info: |-
           {
             "original-request": {
-              "url": "/k8s/v1.8/net.yaml?k8s-version=1.9.2",
-              "date": "Fri Feb 09 2018 18:32:19 GMT+0000 (UTC)"
+              "url": "/k8s/net?k8s-version=1.10.3",
+              "date": "Mon May 21 2018 19:36:02 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -149,6 +147,7 @@ items:
         name: weave-net
       namespace: kube-system
     spec:
+      minReadySeconds: 5
       template:
         metadata:
           labels:
@@ -164,7 +163,7 @@ items:
                     fieldRef:
                       apiVersion: v1
                       fieldPath: spec.nodeName
-              image: 'weaveworks/weave-kube:2.2.0'
+              image: 'weaveworks/weave-kube:2.3.0'
               livenessProbe:
                 httpGet:
                   host: 127.0.0.1
@@ -199,7 +198,7 @@ items:
                     fieldRef:
                       apiVersion: v1
                       fieldPath: spec.nodeName
-              image: 'weaveworks/weave-npc:2.2.0'
+              image: 'weaveworks/weave-npc:2.3.0'
               resources:
                 requests:
                   cpu: 10m

@@ -26,7 +26,7 @@ export ERRCODE_FAILURE=1
 export ERRCODE_TIMEOUT=10
 
 if [[ "$(whoami)" != "root" ]] || ! grep -q Alpine /etc/issue 2>/dev/null; then
-    echo "This script is must be run in a docker container (and will make changes to the filesystem). Exiting."
+    echo "This script must be run in a docker container (and will make changes to the filesystem). Exiting."
     exit 1
 fi
 
@@ -37,38 +37,35 @@ test -n "${AZ}"
 test -n "${REGION}"
 test -n "${S3_BUCKET}"
 test -n "${S3_PREFIX}"
-test -n "${SSH_KEY_NAME}"
-test -n "${SSH_KEY}"
 test -n "${STACK_NAME}"
 
 export AWS_DEFAULT_REGION="${REGION}"
+export SSH_KEY_NAME="${STACK_NAME}-key"
 
 # Setup ssh.  Due to SSH being incredibly paranoid about filesystem permissions
 # we just create our own ssh directory and set it from there.  (This also
 # allows the docker volume mounts to be read-only.)
+out=$(aws ec2  create-key-pair  --region "${REGION}" --key-name "${SSH_KEY_NAME}")
 test ! -e /tmp/qs-ssh/identity
 mkdir -p /tmp/qs-ssh
 chmod 0700 /tmp/qs-ssh
-cp "${SSH_KEY}" /tmp/qs-ssh/identity
+echo -n $out| jq -r '.KeyMaterial' > /tmp/qs-ssh/identity
 export SSH_KEY=/tmp/qs-ssh/identity
 chmod 0600 $SSH_KEY
 
 aws --version >/dev/null
 kubectl version --client >/dev/null
-mkdir -p /tmp/ci/sonobuoy
+sonobuoy version >/dev/null
 
-curl -sfL -o /tmp/ci/sonobuoy/sonobuoy.yaml \
-      https://raw.githubusercontent.com/heptio/sonobuoy/v0.10.0/examples/quickstart.yaml
-
-aws s3 sync --acl=public-read --delete ./templates "s3://${S3_BUCKET}/${S3_PREFIX}/templates/"
-aws s3 sync --acl=public-read --delete ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}/scripts/"
+aws s3 sync --acl=public-read --delete ./templates "s3://${S3_BUCKET}/${S3_PREFIX}templates/"
+aws s3 sync --acl=public-read --delete ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}scripts/"
 
 # TODO: maybe do a calico test and a weave test as separate runs
 aws cloudformation create-stack \
   --disable-rollback \
   --region "${REGION}" \
   --stack-name "${STACK_NAME}" \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
   ParameterKey=AvailabilityZone,ParameterValue="${AZ}" \
   ParameterKey=KeyName,ParameterValue="${SSH_KEY_NAME}" \
@@ -87,6 +84,7 @@ function cleanup() {
     echo "Deleting cloudformation stack ${STACK_NAME}"
     aws cloudformation delete-stack --stack-name "${STACK_NAME}"
     aws cloudformation wait stack-delete-complete --stack-name "${STACK_NAME}"
+    aws ec2 delete-key-pair --key-name "${SSH_KEY_NAME}" --region "${REGION}"
 }
 trap cleanup EXIT
 
@@ -127,8 +125,8 @@ export KUBECONFIG=/tmp/kubeconfig
 kubectl config set-context heptio-sonobuoy --cluster kubernetes --user admin --namespace heptio-sonobuoy
 kubectl config use-context heptio-sonobuoy
 
-# These files should have been included in a docker build
-kubectl apply -f /tmp/ci/sonobuoy/sonobuoy.yaml
+# sonobuoy provided by the Dockerfile
+sonobuoy run --mode=quick
 
 echo "Waiting for sonobuoy to complete"
 tries=0

@@ -16,11 +16,11 @@ S3_BUCKET="${S3_BUCKET:-quickstart-heptio-com}"
 aws s3api head-bucket --bucket "${S3_BUCKET}"
 
 # Where "path/to/your/files" is the directory in S3 under which the templates and scripts directories will be placed
-S3_PREFIX="${S3_PREFIX:-test-local}"
+S3_PREFIX="${S3_PREFIX:-test-local/}"
 
 # Where to place your cluster
-REGION="${REGION:-us-west-1}"
-AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-1a}"
+REGION="${REGION:-us-west-2}"
+AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-2a}"
 
 # Which CNI provider you want weave/calico
 CNI="${CNI:-calico}"
@@ -37,13 +37,13 @@ INSTANCE_TYPE="${INSTANCE_TYPE:-m5.large}"
 INGRESS=0.0.0.0/0
 
 # Copy the files from your local directory into your S3 bucket
-aws s3 sync --acl=public-read ./templates "s3://${S3_BUCKET}/${S3_PREFIX}/templates/"
-aws s3 sync --acl=public-read ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}/scripts/"
+aws s3 sync --acl=public-read ./templates "s3://${S3_BUCKET}/${S3_PREFIX}templates/"
+aws s3 sync --acl=public-read ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}scripts/"
 
 aws cloudformation create-stack \
   --region "${REGION}" \
   --stack-name "${STACK}" \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue="${AVAILABILITY_ZONE}" \
     ParameterKey=KeyName,ParameterValue="${KEYNAME}" \
