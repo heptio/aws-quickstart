@@ -40,3 +40,13 @@ aws elb describe-load-balancers --query "LoadBalancerDescriptions[?VPCId == \`${
 Then you should be able to delete the CloudFormation stack normally.
 
 **Note**: The process of freeing some of the resources associated with the Load Balancers is asynchronous, so it may take some time before the stack can be fully deleted.
+
+## Deploying into an existing VPC
+
+The initialization step of `kubeadm`, `kubeadm init` requires your node to be
+resolvable via DNS.
+
+If you are deploying this stack into an existing VPC that uses AmazonProvidedDNS
+as the domain name servers, you will have to make sure to add the correct domain
+name as well. If you're running in us-east-1 add `ec2.internal`. Otherwise, add
+`<region>.compute.internal` where `<region> is us-west-2, us-east-2, etc.
