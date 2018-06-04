@@ -2,6 +2,16 @@
 
 In addition to the [documentation](http://docs.heptio.com/content/aws.html) available for the Heptio AWS Quick Start, this page outlines some troubleshooting tips if you're running into issues with your quick start.
 
+## Quick Start fails during stack creation
+
+During the creation of the AWS stack for the Heptio Kubernetes Quick-Start, the following error is observed in the CloudFormation logs:
+
+```
+CREATE_FAILED AWS::CloudFormation::Stack K8sStack Requires capabilities : [CAPABILITY_IAM]
+```
+
+Make sure on the final page of the CloudFormation wizard (titled Review), that the last section on the page (titled Capabilities) has the checkbox marked before clicking Create. The checkbox asks the user to allow the template to create IAM resources.
+
 ## Quick Start CloudFormation Master Does Not Start Properly
 
 This can occur for multiple reasons and often requires investigating logs on the failed master instance. The first hurdle is keeping the failed resources around. The cloud formation default option in AWS is to Rollback on failure. When using the console you can disable this by going to `Advanced` and then setting `Rollback on failure` to `No`.
