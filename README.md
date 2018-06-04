@@ -3,8 +3,8 @@
 # Heptio AWS Quickstart
 
 [<img
-src="https://raw.githubusercontent.com/cncf/artwork/master/kubernetes/certified-kubernetes/1.9/color/certified-kubernetes-1.9-color.png"
-align="right" width="200px" alt="certified kubernetes 1.9">][certified] These
+src="https://raw.githubusercontent.com/cncf/artwork/master/kubernetes/certified-kubernetes/1.10/color/certified-kubernetes-1.10-color.png"
+align="right" width="200px" alt="certified kubernetes 1.10">][certified] These
 are the CloudFormation templates for the Heptio AWS Quick Start.  This is where
 active development is happening.
 
@@ -15,7 +15,7 @@ Amazon's page for this is [here][amazon].
 This will be updated and pushed regularly to
 https://github.com/aws-quickstart/quickstart-heptio.
 
-[certified]: https://github.com/cncf/k8s-conformance/tree/master/v1.9/heptio
+[certified]: https://github.com/cncf/k8s-conformance/tree/master/v1.10/heptio
 [details]: https://blog.heptio.com/aws-quickstart-for-kubernetes-26ccaf7e1c8f#.aqb0bit5l
 [amazon]: https://aws.amazon.com/quickstart/architecture/heptio-kubernetes/
 
