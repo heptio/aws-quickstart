@@ -36,7 +36,7 @@ deployed to the Quick Start page on a monthly basis.
 You can also deploy the latest release of this Quick Start via the command line
 using the [helper script provided in this repo][deploy-published].
 
-[deploy-published]: /bin/deploy-latest-published.sh
+[deploy-published]: /bin/boot-latest-published.sh
 
 ## Deploying latest master
 
