@@ -59,4 +59,4 @@ resolvable via DNS.
 If you are deploying this stack into an existing VPC that uses AmazonProvidedDNS
 as the domain name servers, you will have to make sure to add the correct domain
 name as well. If you're running in us-east-1 add `ec2.internal`. Otherwise, add
-`<region>.compute.internal` where `<region> is us-west-2, us-east-2, etc.
+`<region>.compute.internal` where `<region>` is us-west-2, us-east-2, etc.
