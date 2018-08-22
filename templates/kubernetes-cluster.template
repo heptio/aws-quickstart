@@ -295,35 +295,35 @@ Mappings:
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     ap-northeast-1:
-      '64': ami-891deff6
+      '64': ami-0f159b60cdff05086
     ap-northeast-2:
-      '64': ami-312c845f
+      '64': ami-0680ca62fb23e2d9e
     ap-south-1:
-      '64': ami-1c200c73
+      '64': ami-023b820d038deb341
     ap-southeast-1:
-      '64': ami-49487a35
+      '64': ami-00477ca666574012f
     ap-southeast-2:
-      '64': ami-01fb2b63
+      '64': ami-010afcf89fcf332b7
     ca-central-1:
-      '64': ami-04129260
+      '64': ami-0e7fa16f04b747613
     eu-central-1:
-      '64': ami-de486035
+      '64': ami-0954aa00742537446
     eu-west-1:
-      '64': ami-cb92aeb2
+      '64': ami-0d8ce815b6762bf57
     eu-west-2:
-      '64': ami-ea4ba68d
+      '64': ami-046dc2dacfa0ae854
     eu-west-3:
-      '64': ami-d37acbae
+      '64': ami-0b159220317af0751
     sa-east-1:
-      '64': ami-20bfe04c
+      '64': ami-07691c625b83f4021
     us-east-2:
-      '64': ami-731c2016
+      '64': ami-006c052f934cd9329
     us-west-1:
-      '64': ami-b2c1d9d2
+      '64': ami-07022640a9cef0f13
     us-west-2:
-      '64': ami-fef48b86
+      '64': ami-057c58c0eca3e6fe3
     us-east-1:
-      '64': ami-569d0529
+      '64': ami-0c0803fb7e8ca30d3
 # Helper Conditions which help find the right values for resources
 Conditions:
   AssociationProvidedCondition:
@@ -939,7 +939,8 @@ Resources:
       - !Ref MasterRole
 
   # Create a placeholder load balancer for the API server. Backend instances will be added by the master itself on the
-  # first boot in the startup script above.
+  # first boot in the startup script above. The load balancer listens on both port 443 and 6443. 
+  # The port 6443 is the api port specified in kubeadm init and it's used by clients to connet to the master.
   ApiLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
@@ -949,6 +950,16 @@ Resources:
         InstancePort: 6443
         InstanceProtocol: TCP
         LoadBalancerPort: 443
+      - Protocol: TCP
+        InstancePort: 6443
+        InstanceProtocol: TCP
+        LoadBalancerPort: 6443
+      HealthCheck:
+        Target: TCP:6443
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '2'
+        Interval: '10'
+        Timeout: '5'
       ConnectionSettings:
         IdleTimeout: 3600
       Subnets:
@@ -977,16 +988,20 @@ Resources:
       - Key: 'kubernetes.io/service-name'
         Value: 'kube-system/apiserver-public'
 
-  # Security group to allow public access to port 443
+  # Security group to allow public access to port 443 and 6443
   ApiLoadBalancerSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for API server load balancer
       VpcId: !Ref VPCID
       SecurityGroupIngress:
-        CidrIp: !Ref ApiLbLocation
+      - CidrIp: !Ref ApiLbLocation
         FromPort: 443
         ToPort: 443
+        IpProtocol: tcp
+      - CidrIp: !Ref ApiLbLocation
+        FromPort: 6443
+        ToPort: 6443
         IpProtocol: tcp
       Tags:
       - Key: Name
@@ -1073,7 +1088,7 @@ Outputs:
 
   JoinNodes:
     Description: Command to join more nodes to this cluster.
-    Value: !Sub "aws cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --node-name=\"$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)\" --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
+    Value: !Sub "aws s3 cp s3://${ClusterInfoBucket}/cluster-info.yaml /tmp/cluster-info.yaml && kubeadm join --node-name=\"$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)\" --token=${KubeadmToken.Token} --discovery-file=/tmp/cluster-info.yaml ${K8sMasterInstance.PrivateIp}:6443"
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
