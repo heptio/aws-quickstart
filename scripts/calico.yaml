@@ -1,12 +1,10 @@
-### Downloaded and re-hosted with permission from
-### https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
-
-# Calico Version v3.1.1
-# https://docs.projectcalico.org/v3.1/releases#v3.1.1
+# Calico Version v3.2.1
+# https://docs.projectcalico.org/v3.2/releases#v3.2.1
 # This manifest includes the following component versions:
-#   calico/node:v3.1.1
-#   calico/cni:v3.1.1
-#   calico/kube-controllers:v3.1.1
+#   calico/node:v3.2.1
+#   calico/cni:v3.2.1
+#   calico/kube-controllers:v3.2.1
+
 
 # This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
@@ -15,13 +13,17 @@ metadata:
   name: calico-config
   namespace: kube-system
 data:
-  # The location of your etcd cluster.  This uses the Service clusterIP defined below.
+  # Configure this with the location of your etcd cluster.
   etcd_endpoints: "http://10.96.232.136:6666"
 
   # Configure the Calico backend to use.
   calico_backend: "bird"
 
-  # The CNI network configuration to install on each node.
+  # Configure the MTU to use
+  veth_mtu: "1440"
+
+  # The CNI network configuration to install on each node.  The special
+  # values in this config will be automatically populated.
   cni_network_config: |-
     {
       "name": "k8s-pod-network",
@@ -29,8 +31,8 @@ data:
       "plugins": [
         {
           "type": "calico",
-          "etcd_endpoints": "__ETCD_ENDPOINTS__",
           "log_level": "info",
+          "etcd_endpoints": "__ETCD_ENDPOINTS__",
           "mtu": 1500,
           "ipam": {
               "type": "calico-ipam"
@@ -185,7 +187,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: quay.io/calico/node:v3.1.1
+          image: quay.io/calico/node:v3.2.1
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -225,7 +227,10 @@ spec:
               value: "false"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
-              value: "1440"
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: veth_mtu
             # Set Felix logging to "info"
             - name: FELIX_LOGSEVERITYSCREEN
               value: "info"
@@ -243,13 +248,16 @@ spec:
             httpGet:
               path: /liveness
               port: 9099
+              host: localhost
             periodSeconds: 10
             initialDelaySeconds: 10
             failureThreshold: 6
           readinessProbe:
-            httpGet:
-              path: /readiness
-              port: 9099
+            exec:
+              command:
+              - /bin/calico-node
+              - -bird-ready
+              - -felix-ready
             periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
@@ -264,7 +272,7 @@ spec:
         # This container installs the Calico CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: quay.io/calico/cni:v3.1.1
+          image: quay.io/calico/cni:v3.2.1
           command: ["/install-cni.sh"]
           env:
             # Name of the CNI config file to create.
@@ -282,6 +290,12 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: cni_network_config
+            # CNI MTU Config variable
+            - name: CNI_MTU
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: veth_mtu
           volumeMounts:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
@@ -347,7 +361,7 @@ spec:
       serviceAccountName: calico-kube-controllers
       containers:
         - name: calico-kube-controllers
-          image: quay.io/calico/kube-controllers:v3.1.1
+          image: quay.io/calico/kube-controllers:v3.2.1
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -358,6 +372,11 @@ spec:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS
               value: policy,profile,workloadendpoint,node
+          readinessProbe:
+            exec:
+              command:
+              - /usr/bin/check-status
+              - -r
 
 ---
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2017 by the contributors
+# Copyright 2018 by the contributors
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -34,25 +34,48 @@ test -n "{{Region}}"
 test -n "{{ClusterInfoBucket}}"
 test -n "{{ClusterDNSProvider}}"
 
+INSTANCE_ID=$(ec2metadata --instance-id)
+
+# Add this machine (master) to the load balancer for external access
+aws elb register-instances-with-load-balancer \
+  --load-balancer-name {{LoadBalancerName}} \
+  --instances ${INSTANCE_ID} \
+  --region {{Region}}
+
 # kubeadm wants lowercase for DNS (as it probably should)
 LB_DNS=$(echo "{{LoadBalancerDns}}" | tr 'A-Z' 'a-z')
+
+# get load balancer ip address to be advertised
+LB_IPV4=$(dig +short {{LoadBalancerDns}})
 
 HOSTNAME="$(hostname -f 2>/dev/null || curl http://169.254.169.254/latest/meta-data/local-hostname)"
 
 # reset kubeadm (workaround for kubelet package presence)
-kubeadm reset
+kubeadm reset --force
 
 cat >/tmp/kubeadm.yaml <<EOF
 ---
-apiVersion: kubeadm.k8s.io/v1alpha1
+apiVersion: kubeadm.k8s.io/v1alpha2
 kind: MasterConfiguration
-token: {{ClusterToken}}
-cloudProvider: aws
 kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
-nodeName: ${HOSTNAME}
-tokenTTL: 0s
+api:
+  controlPlaneEndpoint: ${LB_DNS}:443
 apiServerCertSANs:
-- ${LB_DNS}
+- ${LB_IPV4}
+apiServerExtraArgs:
+  cloud-provider: aws
+nodeRegistration:
+  name: ${HOSTNAME}
+  kubeletExtraArgs:
+    cloud-provider: aws
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: {{ClusterToken}}
+  ttl: 0s
+  usages:
+  - signing
+  - authentication
 EOF
 
 # Feature gates
@@ -92,29 +115,17 @@ kubectl apply -f {{StorageClassUrl}}
 # Set up the network policy blocking the AWS metadata endpoint from the default namespace.
 kubectl apply -f {{NetworkPolicyUrl}}
 
-INSTANCE_ID=$(ec2metadata --instance-id)
-# Add this machine (master) to the load balancer for external access
-aws elb register-instances-with-load-balancer \
-  --load-balancer-name {{LoadBalancerName}} \
-  --instances ${INSTANCE_ID} \
-  --region {{Region}}
-
 # Use kubeadm's kubeconfig command to grab a client-cert-authenticated
 # kubeconfig file for administrative access to the cluster.
+# Because kubeadm doesn't set controlPlaneEndpoint as master, the
+# --apiserver-advertise-address is set to the load balancer external ipv4 address.
 KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
 
-# TODO(@chuckha): --apiserver-advertise-address is resolved to an IP address.
-# We don't want this to happen because we need to use the ELB load balancer as the
-# api server address.
-# Instead we set the server by hand.
 kubeadm alpha phase kubeconfig user \
   --client-name admin \
-  --apiserver-advertise-address "${LB_DNS}" \
+  --apiserver-advertise-address "${LB_IPV4}" \
   >$KUBECONFIG_OUTPUT
 
-# This line sets the generated kubeconfig file's api server address to our loadbalancer.
-# This should be removed if kubeadm supports non-ip advertise addresses.
-KUBECONFIG="${KUBECONFIG_OUTPUT}" kubectl config set-cluster kubernetes --server="https://${LB_DNS}"
 chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
 
