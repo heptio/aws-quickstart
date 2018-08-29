@@ -5,7 +5,6 @@
 #   calico/cni:v3.2.1
 #   calico/kube-controllers:v3.2.1
 
-
 # This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
 apiVersion: v1
@@ -13,7 +12,7 @@ metadata:
   name: calico-config
   namespace: kube-system
 data:
-  # Configure this with the location of your etcd cluster.
+  # The location of your etcd cluster.  This uses the Service clusterIP defined below.
   etcd_endpoints: "http://10.96.232.136:6666"
 
   # Configure the Calico backend to use.
