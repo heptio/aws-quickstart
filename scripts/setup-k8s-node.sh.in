@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2017 by the contributors
+# Copyright 2018 by the contributors
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ test -n "{{K8sMasterPrivateIp}}"
 test -n "{{ClusterToken}}"
 test -n "{{ClusterInfoBucket}}"
 
-kubeadm reset
+kubeadm reset --force
 
 # Get the discovery file
 aws s3 cp "s3://{{ClusterInfoBucket}}/cluster-info.yaml" /tmp/cluster-info.yaml

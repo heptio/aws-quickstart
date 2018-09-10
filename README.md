@@ -36,7 +36,7 @@ deployed to the Quick Start page on a monthly basis.
 You can also deploy the latest release of this Quick Start via the command line
 using the [helper script provided in this repo][deploy-published].
 
-[deploy-published]: /bin/deploy-latest-published.sh
+[deploy-published]: /bin/boot-latest-published.sh
 
 ## Deploying latest master
 
@@ -45,7 +45,7 @@ Quick Start page using the AWS Console.
 
 **[Launch Latest Quickstart Now][launch]**
 
-[launch]: https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?param_QSS3BucketName=heptio-aws-quickstart-test&param_QSS3KeyPrefix=heptio%2Fkubernetes%2Fmaster&stackName=Heptio-Kubernetes&templateURL=https:%2F%2Fheptio-aws-quickstart-test.s3.amazonaws.com%2Fheptio%2Fkubernetes%2Fmaster%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template
+[launch]: https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?param_QSS3BucketName=heptio-aws-quickstart-test&param_QSS3KeyPrefix=heptio%2Fkubernetes%2Fmaster%2F&stackName=Heptio-Kubernetes&templateURL=https:%2F%2Fheptio-aws-quickstart-test.s3.amazonaws.com%2Fheptio%2Fkubernetes%2Fmaster%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template
 
 ### Master branch from the command line
 

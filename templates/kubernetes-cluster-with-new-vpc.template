@@ -40,6 +40,9 @@ Metadata:
     - Label:
         default: Advanced
       Parameters:
+      - VPCCIDR
+      - PrivateSubnetCIDR
+      - PublicSubnetCIDR
       - ClusterDNSProvider
       - NetworkingProvider
       - K8sNodeCapacity
@@ -50,6 +53,12 @@ Metadata:
       - QSS3KeyPrefix
 
     ParameterLabels:
+      VPCCIDR:
+        default: VPC CIDR Block
+      PrivateSubnetCIDR:
+        default: Private Subnet CIDR Block
+      PublicSubnetCIDR:
+        default: Public Subnet CIDR Block
       KeyName:
         default: SSH Key
       AvailabilityZone:
@@ -75,6 +84,27 @@ Metadata:
 
 # The Parameters allow the user to pass custom settings to the stack before creation
 Parameters:
+  VPCCIDR:
+    Description: VPC CIDR Block
+    Type: String
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: '10.0.0.0/16'
+
+  PrivateSubnetCIDR:
+    Description: CIDR Block for the Private Subnet, must be a valid subnet of the VPC CIDR and not overlap with PublicSubnetCIDR
+    Type: String
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: '10.0.0.0/19'
+
+  PublicSubnetCIDR:
+    Description: CIDR Block for the Public Subnet, must be a valid subnet of the VPC CIDR and not overlap with PrivateSubnetCIDR
+    Type: String
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: '10.0.128.0/20'
+
   KeyName:
     Description: Existing EC2 KeyPair for SSH access.
     Type: AWS::EC2::KeyPair::KeyName
@@ -327,7 +357,7 @@ Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: '10.0.0.0/16'
+      CidrBlock: !Ref VPCCIDR
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
       Tags:
@@ -370,7 +400,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: '10.0.0.0/19'
+      CidrBlock: !Ref PrivateSubnetCIDR
       AvailabilityZone: !Ref AvailabilityZone
       Tags:
       - Key: Name
@@ -382,7 +412,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: '10.0.128.0/20'
+      CidrBlock: !Ref PublicSubnetCIDR
       AvailabilityZone: !Ref AvailabilityZone
       Tags:
       - Key: Name
