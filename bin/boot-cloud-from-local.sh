@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 set -o xtrace
-set -o errexit
 set -o nounset
 
+# Where to place your cluster
+REGION="${REGION:-us-west-2}"
+AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-2a}"
 
-# TODO(chuckha) if the bucket doesn't exist, create it. Also probably delete it at the end?
-
-# The bucket must exist.
+# Bucket may exist.
 # Can create a bucket with something like:
 # aws s3api create-bucket --bucket heptio-hello-world-idjfuiewhj --create-bucket-configuration LocationConstraint=us-west-2
 S3_BUCKET="${S3_BUCKET:-quickstart-heptio-com}"
@@ -15,12 +15,13 @@ S3_BUCKET="${S3_BUCKET:-quickstart-heptio-com}"
 # Will error if the bucket doesn't exist or you don't have permission to it.
 aws s3api head-bucket --bucket "${S3_BUCKET}"
 
+# If bucket cannot be found, create it.
+if [ "$?" -eq 255 ]; then
+  aws s3api create-bucket --bucket "${S3_BUCKET}" --create-bucket-configuration LocationConstraint=$REGION
+fi
+
 # Where "path/to/your/files" is the directory in S3 under which the templates and scripts directories will be placed
 S3_PREFIX="${S3_PREFIX:-test-local/}"
-
-# Where to place your cluster
-REGION="${REGION:-us-west-2}"
-AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-2a}"
 
 # Which CNI provider you want weave/calico
 CNI="${CNI:-calico}"
