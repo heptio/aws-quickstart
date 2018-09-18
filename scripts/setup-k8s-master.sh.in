@@ -76,6 +76,8 @@ bootstrapTokens:
   usages:
   - signing
   - authentication
+controllerManagerExtraArgs:
+  cloud-provider: aws
 EOF
 
 # Feature gates
