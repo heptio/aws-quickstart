@@ -17,7 +17,7 @@ aws s3api head-bucket --bucket "${S3_BUCKET}"
 
 # If bucket cannot be found, create it.
 if [ "$?" -eq 255 ]; then
-  aws s3api create-bucket --bucket "${S3_BUCKET}" --create-bucket-configuration LocationConstraint=$REGION
+  aws s3api create-bucket --bucket "${S3_BUCKET}" --create-bucket-configuration LocationConstraint=$REGION --region $REGION
 fi
 
 # Where "path/to/your/files" is the directory in S3 under which the templates and scripts directories will be placed
