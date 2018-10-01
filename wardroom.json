@@ -1,6 +1,6 @@
 {
     "ami": {
-        "build_version": "486db4400ba1e04515c37befae6efd760ebfb637",
+        "build_version": "a6c58dd046b062857b1f5205ff7522185938b393",
         "distribution": "Ubuntu",
         "distribution_release": "xenial",
         "distribution_version": "16.04",
