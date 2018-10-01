@@ -295,35 +295,35 @@ Mappings:
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   RegionMap:
     ap-northeast-1:
-      '64': ami-0f159b60cdff05086
+      '64': ami-0b877c5e45ebf9c0a
     ap-northeast-2:
-      '64': ami-0680ca62fb23e2d9e
+      '64': ami-062e8bb4b67e8ad5e
     ap-south-1:
-      '64': ami-023b820d038deb341
+      '64': ami-0851d8bd502a22f42
     ap-southeast-1:
-      '64': ami-00477ca666574012f
+      '64': ami-0dab6dcb940e2995c
     ap-southeast-2:
-      '64': ami-010afcf89fcf332b7
+      '64': ami-0f8ffaadf3dbd5c08
     ca-central-1:
-      '64': ami-0e7fa16f04b747613
+      '64': ami-01a0718639c98c7f3
     eu-central-1:
-      '64': ami-0954aa00742537446
+      '64': ami-0665bc30fa45c8a9b
     eu-west-1:
-      '64': ami-0d8ce815b6762bf57
+      '64': ami-071c9dc485a8dd575
     eu-west-2:
-      '64': ami-046dc2dacfa0ae854
+      '64': ami-0317f91aee45b8a06
     eu-west-3:
-      '64': ami-0b159220317af0751
+      '64': ami-0728d8b343cbce6c3
     sa-east-1:
-      '64': ami-07691c625b83f4021
+      '64': ami-0ed07722477ee4fcc
     us-east-2:
-      '64': ami-006c052f934cd9329
+      '64': ami-0aed869d62c92bc4f
     us-west-1:
-      '64': ami-07022640a9cef0f13
+      '64': ami-02b7bcf98a54651ca
     us-west-2:
-      '64': ami-057c58c0eca3e6fe3
+      '64': ami-0eae752d5efa34527
     us-east-1:
-      '64': ami-0c0803fb7e8ca30d3
+      '64': ami-0bd4c4f9bd412ef80
 # Helper Conditions which help find the right values for resources
 Conditions:
   AssociationProvidedCondition:
