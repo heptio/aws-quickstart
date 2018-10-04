@@ -76,6 +76,9 @@ bootstrapTokens:
   usages:
   - signing
   - authentication
+controllerManagerExtraArgs:
+  cloud-provider: aws
+  allocate-node-cidrs: "false"
 EOF
 
 # Feature gates
