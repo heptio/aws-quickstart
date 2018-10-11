@@ -36,10 +36,10 @@ cat >/tmp/kubeadm-node.yaml <<EOF
 ---
 apiVersion: kubeadm.k8s.io/v1alpha2
 kind: NodeConfiguration
-token: {{ClusterToken}}
-discoveryFile: /tmp/cluster-info.yaml
+token: "{{ClusterToken}}"
+discoveryFile: "/tmp/cluster-info.yaml"
 nodeRegistration:
-  name: ${HOSTNAME}
+  name: "${HOSTNAME}"
   kubeletExtraArgs:
     cloud-provider: aws
 EOF
