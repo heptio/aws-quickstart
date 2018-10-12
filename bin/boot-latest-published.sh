@@ -5,13 +5,13 @@ REGION=us-west-2
 AZ=us-west-2b
 
 # What to name your CloudFormation stack
-STACK=Heptio-Kubernetes
+STACK=lol
 
 # Which SSH key you want to allow access to the cluster
-KEYNAME=laptop
+KEYNAME=lapto
 
 # Import an SSH public key (or skip this command and create/import an SSH key pair in the AWS console)
-aws ec2 --region $REGION import-key-pair --key-name $KEYNAME --public-key-material "$(cat ~/.ssh/id_rsa.pub)"
+# aws ec2 --region $REGION import-key-pair --key-name $KEYNAME --public-key-material "$(cat ~/.ssh/id_rsa.pub)"
 
 # What IP addresses should be able to connect over SSH and over the Kubernetes API
 INGRESS=0.0.0.0/0
