@@ -39,7 +39,7 @@ kind: NodeConfiguration
 token: {{ClusterToken}}
 discoveryFile: /tmp/cluster-info.yaml
 nodeRegistration:
-  name: ${HOSTNAME}
+  name: "${HOSTNAME}"
   kubeletExtraArgs:
     cloud-provider: aws
 EOF

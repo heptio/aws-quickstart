@@ -70,9 +70,9 @@ nodeRegistration:
     cloud-provider: aws
 bootstrapTokens:
 - groups:
-  - system:bootstrappers:kubeadm:default-node-token
-  token: {{ClusterToken}}
-  ttl: 0s
+  - "system:bootstrappers:kubeadm:default-node-token"
+  token: "{{ClusterToken}}"
+  ttl: "0s"
   usages:
   - signing
   - authentication
