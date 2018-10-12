@@ -57,27 +57,27 @@ cat >/tmp/kubeadm.yaml <<EOF
 ---
 apiVersion: kubeadm.k8s.io/v1alpha2
 kind: MasterConfiguration
-kubernetesVersion: $(cat /etc/kubernetes_community_ami_version)
+kubernetesVersion: "$(cat /etc/kubernetes_community_ami_version)"
 api:
-  controlPlaneEndpoint: ${LB_DNS}:443
+  controlPlaneEndpoint: "${LB_DNS}:443"
 apiServerCertSANs:
-- ${LB_IPV4}
+- "${LB_IPV4}"
 apiServerExtraArgs:
-  cloud-provider: aws
+  cloud-provider: "aws"
 nodeRegistration:
-  name: ${HOSTNAME}
+  name: "${HOSTNAME}"
   kubeletExtraArgs:
-    cloud-provider: aws
+    cloud-provider: "aws"
 bootstrapTokens:
 - groups:
-  - system:bootstrappers:kubeadm:default-node-token
-  token: {{ClusterToken}}
-  ttl: 0s
+  - "system:bootstrappers:kubeadm:default-node-token"
+  token: "{{ClusterToken}}"
+  ttl: "0s"
   usages:
   - signing
   - authentication
 controllerManagerExtraArgs:
-  cloud-provider: aws
+  cloud-provider: "aws"
   allocate-node-cidrs: "false"
 EOF
 
