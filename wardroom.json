@@ -1,10 +1,10 @@
 {
     "ami": {
-        "build_version": "a6c58dd046b062857b1f5205ff7522185938b393",
+        "build_version": "91163cee43139fc3633180b7db607c505fcbbef6",
         "distribution": "Ubuntu",
         "distribution_release": "xenial",
         "distribution_version": "16.04",
         "kubernetes_cni_version": "0.6.0-00",
-        "kubernetes_version": "1.11.2-00"
+        "kubernetes_version": "1.11.5-00"
     }
 }
