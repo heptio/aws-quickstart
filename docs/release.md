@@ -110,13 +110,14 @@ sonobuoy run. Unfortunately, you'll have to set this up yourself.
 
 ### 6. Send a PR to Amazon
 
-The way the quickstart makes its way to Amazon is by PRing to Amazon's [upstream
-repo][amazon].
+Follow these steps to open a PR against Amazon's branch:
 
-* Open a PR from Heptio's repo to the [Amazon repo][amazon]. Important: PRs
-  should be sent to the `develop` branch, not the `master` branch.
+1. Create a new branch that is based on [aws' develop branch][amazon-develop].
+2. Cherry pick your commits from master into your new branch.
+3. Open a PR to merge your new branch into aws's develop branch.
 
-[amazon]: https://github.com/aws-quickstart/quickstart-heptio
+[amazon-develop]: https://github.com/aws-quickstart/quickstart-heptio/tree/develop
+[commits]: https://github.com/heptio/aws-quickstart/compare/master...aws-quickstart:develop?expand=1
 
 ### 7. Certify the Cluster
 
