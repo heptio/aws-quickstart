@@ -473,35 +473,35 @@ Parameters:
 Mappings:
   RegionMap:
     ap-northeast-1:
-      '64': ami-d39a02b5
+      '64': ami-0d5e82481c5fd4ad5
     ap-northeast-2:
-      '64': ami-67973709
+      '64': ami-0507b772e2c9b8c15
     ap-south-1:
-      '64': ami-5d055232
+      '64': ami-0c8810f694cbe10ba
     ap-southeast-1:
-      '64': ami-325d2e4e
+      '64': ami-09f2be3a5a5867258
     ap-southeast-2:
-      '64': ami-37df2255
+      '64': ami-04978aa3dd8b62cc8
     ca-central-1:
-      '64': ami-f0870294
+      '64': ami-0a851426a8a56bf4b
     eu-central-1:
-      '64': ami-af79ebc0
+      '64': ami-00f3256a9deda4e1b
     eu-west-1:
-      '64': ami-4d46d534
+      '64': ami-0233bae36f499afe8
     eu-west-2:
-      '64': ami-d7aab2b3
+      '64': ami-03c015fc0026bf4fc
     eu-west-3:
-      '64': ami-5e0eb923
+      '64': ami-0b2985229e9f6bbba
     sa-east-1:
-      '64': ami-1157157d
+      '64': ami-08a4ba9038d7e8565
     us-east-1:
-      '64': ami-41e0b93b
+      '64': ami-03a935aafa6b52b97
     us-east-2:
-      '64': ami-2581aa40
+      '64': ami-00c5e3f4a8dd369e8
     us-west-1:
-      '64': ami-79aeae19
+      '64': ami-0689ca7fe00282a37
     us-west-2:
-      '64': ami-1ee65166
+      '64': ami-0dbd6cabe4749f197
 Conditions:
   UsEast1Condition:
     Fn::Equals:
