@@ -55,19 +55,8 @@ kubeadm reset --force
 
 cat >/tmp/kubeadm.yaml <<EOF
 ---
-apiVersion: kubeadm.k8s.io/v1alpha2
-kind: MasterConfiguration
-kubernetesVersion: "$(cat /etc/kubernetes_community_ami_version)"
-api:
-  controlPlaneEndpoint: "${LB_DNS}:443"
-apiServerCertSANs:
-- "${LB_IPV4}"
-apiServerExtraArgs:
-  cloud-provider: "aws"
-nodeRegistration:
-  name: "${HOSTNAME}"
-  kubeletExtraArgs:
-    cloud-provider: "aws"
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: InitConfiguration
 bootstrapTokens:
 - groups:
   - "system:bootstrappers:kubeadm:default-node-token"
@@ -76,15 +65,34 @@ bootstrapTokens:
   usages:
   - signing
   - authentication
-controllerManagerExtraArgs:
-  cloud-provider: "aws"
-  allocate-node-cidrs: "false"
+nodeRegistration:
+  name: "${HOSTNAME}"
+  kubeletExtraArgs:
+    cloud-provider: "aws"
+---
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
+kubernetesVersion: "$(cat /etc/kubernetes_community_ami_version)"
+apiServer:
+  timeoutForControlPlane: 4m0s
+  certSANs:
+  - "${LB_IPV4}"
+  extraArgs:
+    cloud-provider: "aws"
+clusterName: kubernetes
+controlPlaneEndpoint: "${LB_DNS}:443"
+controllerManager:
+  extraArgs:
+    cloud-provider: "aws"
+    allocate-node-cidrs: "false"
 EOF
 
 # Feature gates
-echo "featureGates:" >> /tmp/kubeadm.yaml
+echo "dns:" >> /tmp/kubeadm.yaml
 if [[ "{{ClusterDNSProvider}}" == "CoreDNS" ]]; then
-  echo "  CoreDNS: True" >> /tmp/kubeadm.yaml
+  echo "  type: CoreDNS" >> /tmp/kubeadm.yaml
+else
+  echo "  type: kube-dns" >> /tmp/kubeadm.yaml
 fi
 
 if [[ "{{NetworkingProvider}}" == "calico" ]]; then
@@ -120,11 +128,12 @@ kubectl apply -f {{NetworkPolicyUrl}}
 
 # Use kubeadm's kubeconfig command to grab a client-cert-authenticated
 # kubeconfig file for administrative access to the cluster.
-# Because kubeadm doesn't set controlPlaneEndpoint as master, the
-# --apiserver-advertise-address is set to the load balancer external ipv4 address.
 KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
 
-kubeadm alpha phase kubeconfig user \
+# kubeadm kubeconfig will select the host's default interface as the
+# controlPlaneEndpoint. Since that is a private interface we need to manually
+# override it to the load balancer's DNS.
+kubeadm alpha kubeconfig user \
   --client-name admin \
   --apiserver-advertise-address "${LB_IPV4}" \
   >$KUBECONFIG_OUTPUT
