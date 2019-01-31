@@ -705,6 +705,7 @@ Resources:
       TemplateURL: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/kubernetes-cluster.template"
       Parameters:
         VPCID: !Ref VPC
+        NATEIP: !Ref NATEIP
         AvailabilityZone: !Ref AvailabilityZone
         InstanceType: !Ref InstanceType
         DiskSizeGb: !Ref DiskSizeGb
