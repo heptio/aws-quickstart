@@ -36,6 +36,7 @@ Metadata:
         default: Amazon EC2 Configuration
       Parameters:
       - VPCID
+      - NATEIP
       - AvailabilityZone
       - InstanceType
       - DiskSizeGb
@@ -66,6 +67,8 @@ Metadata:
         default: SSH Key
       VPCID:
         default: VPC
+      NATEIP:
+        default: NAT Elastic IP of the private subnet
       AvailabilityZone:
         default: Availability Zone
       ClusterSubnetId:
@@ -108,6 +111,12 @@ Parameters:
   VPCID:
     Description: Existing VPC to use for this cluster.
     Type: AWS::EC2::VPC::Id
+
+  NATEIP:
+    Description: NAT Elastic IP of the private subnet
+    Type: String
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})"
+    ConstraintDescription: must be a valid IPv4 address of the form x.x.x.x.
 
   ClusterSubnetId:
     Description: Existing subnet to use for this cluster. Must belong to the Availability Zone above.
@@ -1073,6 +1082,14 @@ Resources:
         ToPort: 443
         IpProtocol: tcp
       - CidrIp: !Ref ApiLbLocation
+        FromPort: 6443
+        ToPort: 6443
+        IpProtocol: tcp
+      - CidrIp: !Sub "${NATEIP}/32"
+        FromPort: 443
+        ToPort: 443
+        IpProtocol: tcp
+      - CidrIp: !Sub "${NATEIP}/32"
         FromPort: 6443
         ToPort: 6443
         IpProtocol: tcp
