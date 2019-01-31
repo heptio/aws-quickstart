@@ -130,13 +130,16 @@ kubectl apply -f {{NetworkPolicyUrl}}
 # kubeconfig file for administrative access to the cluster.
 KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig
 
-# kubeadm kubeconfig will select the host's default interface as the
-# controlPlaneEndpoint. Since that is a private interface we need to manually
-# override it to the load balancer's DNS.
+# kubeadm requires --apiserver-advertise-address to be an IP address but we
+# want to use the DNS name in case the IP changes. Using the LB_IPV4 just as a
+# a dummy value to facilitate precise replacement and avoid complications with
+# ensuring we have the right IP.
 kubeadm alpha kubeconfig user \
   --client-name admin \
   --apiserver-advertise-address "${LB_IPV4}" \
   >$KUBECONFIG_OUTPUT
+
+sed -i "s~https://${LB_IPV4}:6443~https://${LB_DNS}:443~" $KUBECONFIG_OUTPUT
 
 chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
