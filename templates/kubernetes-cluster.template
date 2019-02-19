@@ -144,7 +144,7 @@ Parameters:
   InstanceType:
     Description: EC2 instance type for the cluster.
     Type: String
-    Default: m4.large
+    Default: m5.large
     AllowedValues:
     - c4.2xlarge
     - c4.4xlarge
