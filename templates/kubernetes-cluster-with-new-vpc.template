@@ -24,8 +24,8 @@ Description: 'QS(5042) Kubernetes AWS CloudFormation Template: Create a Kubernet
   suitable for development and small single-team clusters. **WARNING** This
   template creates four Amazon EC2 instances with default settings. You will
   be billed for the AWS resources used if you create a stack from this template.
-  **SUPPORT** Please visit http://jump.heptio.com/aws-qs-help for support.
-  **NEXT STEPS** Please visit http://jump.heptio.com/aws-qs-next.'
+  **SUPPORT** Please visit https://github.com/heptio/aws-quickstart/blob/master/troubleshooting.md for support.
+  **NEXT STEPS** Please visit https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md.'
 
 # The Metadata tells AWS how to display the parameters during stack creation
 Metadata:
@@ -399,7 +399,7 @@ Parameters:
     ConstraintDescription: must be a valid Current Generation EC2 instance type.
 
   AvailabilityZone:
-    Description: The Availability Zone for this cluster. Heptio recommends
+    Description: The Availability Zone for this cluster. VMware recommends
       that you run one cluster per AZ and use tooling to coordinate across AZs.
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
@@ -441,7 +441,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase
       letters, uppercase letters, hyphens (-), and forward slash (/).
-    Default: quickstart-heptio/
+    Default: quickstart-vmware/
     Description: Only change this if you have set up assets in an S3 bucket, as explained
       in the S3 Bucket parameter. S3 key prefix for the Quick Start assets.
       Quick Start key prefix can include numbers, lowercase letters, uppercase
@@ -779,5 +779,5 @@ Outputs:
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
-      http://jump.heptio.com/aws-qs-next
+      https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md
     Value: !GetAtt K8sStack.Outputs.NextSteps

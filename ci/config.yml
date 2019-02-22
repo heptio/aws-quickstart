@@ -1,7 +1,7 @@
 global:
   marketplace-ami: false
   owner: quickstart-eng@amazon.com
-  qsname: quickstart-heptio
+  qsname: quickstart-vmware
   reporting: true
   regions:
     - ap-northeast-1
@@ -16,6 +16,6 @@ global:
     - us-west-2
 
 tests:
-  heptio:
+  vmware:
     parameter_input: kubernetes-cluster-with-new-vpc-inputs.json
     template_file: kubernetes-cluster-with-new-vpc.template
