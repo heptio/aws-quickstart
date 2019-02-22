@@ -1,11 +1,11 @@
 ![AWS Quick Start for Kubernets](images/banner.jpg)
 
-# Heptio AWS Quickstart
+# VMware AWS Quickstart
 
 [<img
 src="https://raw.githubusercontent.com/cncf/artwork/master/kubernetes/certified-kubernetes/1.11/color/certified-kubernetes-1.11-color.png"
 align="right" width="200px" alt="certified kubernetes 1.11">][certified] These
-are the CloudFormation templates for the Heptio AWS Quick Start.  This is where
+are the CloudFormation templates for the VMware AWS Quick Start.  This is where
 active development is happening.
 
 Details of the Quick Start are in this [Heptio Blog post][details].
@@ -13,21 +13,21 @@ Details of the Quick Start are in this [Heptio Blog post][details].
 Amazon's page for this is [here][amazon].
 
 This will be updated and pushed regularly to
-https://github.com/aws-quickstart/quickstart-heptio.
+https://github.com/aws-quickstart/quickstart-vmware.
 
 [certified]: https://github.com/cncf/k8s-conformance/tree/master/v1.11/heptio
 [details]: https://blog.heptio.com/aws-quickstart-for-kubernetes-26ccaf7e1c8f#.aqb0bit5l
-[amazon]: https://aws.amazon.com/quickstart/architecture/heptio-kubernetes/
+[amazon]: https://aws.amazon.com/quickstart/architecture/vmware-kubernetes/
 
 ## Deploying the latest release
 
 The canonical way to deploy this Quick Start is by following the "Deploy on AWS
 into a new VPC" link on this project's [AWS Quick Start Page][qs-arch].
 
-[qs-arch]: https://aws.amazon.com/quickstart/architecture/heptio-kubernetes/
+[qs-arch]: https://aws.amazon.com/quickstart/architecture/vmware-kubernetes/
 
-You can see what's behind that link by checking AWS's fork of Heptio's
-repository at https://github.com/aws-quickstart/quickstart-heptio.  The `master`
+You can see what's behind that link by checking AWS's fork of VMware's
+repository at https://github.com/aws-quickstart/quickstart-vmware.  The `master`
 branch of github.com/heptio/aws-quickstart is merged into AWS's repository and
 deployed to the Quick Start page on a monthly basis.
 
@@ -45,7 +45,7 @@ Quick Start page using the AWS Console.
 
 **[Launch Latest Quickstart Now][launch]**
 
-[launch]: https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?param_QSS3BucketName=heptio-aws-quickstart-test&param_QSS3KeyPrefix=heptio%2Fkubernetes%2Fmaster%2F&stackName=Heptio-Kubernetes&templateURL=https:%2F%2Fheptio-aws-quickstart-test.s3.amazonaws.com%2Fheptio%2Fkubernetes%2Fmaster%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template
+[launch]: https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?param_QSS3BucketName=vmware-aws-quickstart-test&param_QSS3KeyPrefix=vmware%2Fkubernetes%2Fmaster%2F&stackName=VMware-Kubernetes&templateURL=https:%2F%2Fvmware-aws-quickstart-test.s3.amazonaws.com%2Fvmware%2Fkubernetes%2Fmaster%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template
 
 ### Master branch from the command line
 
@@ -114,7 +114,7 @@ kubectl get nodes
 This Quick Start is developed as a set of AWS CloudFormation templates. This is
 a brief overview of the files in this repo, for more architecture details see
 the [Deployment
-Guide](https://s3.amazonaws.com/quickstart-reference/heptio/latest/doc/heptio-kubernetes-on-the-aws-cloud.pdf)
+Guide](https://s3.amazonaws.com/quickstart-reference/vmware/latest/doc/vmware-kubernetes-on-the-aws-cloud.pdf)
 
 **The `templates` directory**:
 

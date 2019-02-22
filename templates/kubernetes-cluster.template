@@ -17,16 +17,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'QS(5042) Kubernetes AWS CloudFormation Template: Create a Kubernetes
   cluster in an existing VPC. This template is for users who want to add
   a Kubernetes cluster to existing AWS infrastructure. The master node is
-  an auto-recovering Amazon EC2 instance. 1-20 additional EC2 instances in an
-  AutoScalingGroup join the Kubernetes cluster as nodes. An ELB provides
-  configurable external access to the Kubernetes API. If you choose a private
-  subnet, make sure it has a bastion host for SSH access to your cluster. If you
-  choose a public subnet, you can connect directly to the master node. The stack
-  is suitable for development and small single-team clusters. **WARNING** This
-  template creates four Amazon EC2 instances with default settings. You will
-  be billed for the AWS resources used if you create a stack from this template.
-  **SUPPORT** Please visit http://jump.heptio.com/aws-qs-help for support.
-  **NEXT STEPS** Please visit http://jump.heptio.com/aws-qs-next.'
+  an auto-recovering Amazon EC2 instance with additional EC2 instances in an
+  AutoScalingGroup as nodes. An ELB provides configurable external access to the
+  Kubernetes API. If you choose a private subnet, make sure it has a bastion host
+  for SSH access to your cluster. If you choose a public subnet, you can connect
+  directly to the master node. The stack is suitable for development and small
+  single-team clusters. **WARNING** This template creates four Amazon EC2 instances
+  with default settings. You will be billed for the AWS resources.
+  **SUPPORT** Please visit https://github.com/heptio/aws-quickstart/blob/master/troubleshooting.md for support.
+  **NEXT STEPS** Please visit https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md.'
 
 # The Metadata tells AWS how to display the parameters during stack creation
 Metadata:
@@ -282,7 +281,7 @@ Parameters:
   # Required. This is an availability zone from your region
   # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
   AvailabilityZone:
-    Description: The Availability Zone for this cluster. Heptio recommends
+    Description: The Availability Zone for this cluster. VMware recommends
       that you run one cluster per AZ and use tooling to coordinate across AZs.
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of an AWS Availability Zone
@@ -330,7 +329,7 @@ Parameters:
     Default: aws-quickstart
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
-      scripts from the scripts/ and templates/ directories of your own fork of the Heptio
+      scripts from the scripts/ and templates/ directories of your own fork of the VMware
       Quick Start assets, uploaded to S3 and stored at
       ${bucketname}.s3.amazonaws.com/${prefix}/scripts/somefile.txt.S3. The bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
@@ -341,7 +340,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters, uppercase
       letters, hyphens (-), and forward slash (/).
-    Default: quickstart-heptio/
+    Default: quickstart-vmware/
     Description: Only change this if you have set up assets in an S3 bucket, as explained
       in the S3 Bucket parameter. S3 key prefix for the Quick Start assets.
       Quick Start key prefix can include numbers, lowercase letters, uppercase
@@ -1182,5 +1181,5 @@ Outputs:
 
   NextSteps:
     Description: Verify your cluster and deploy a test application. Instructions -
-      http://jump.heptio.com/aws-qs-next
-    Value: http://jump.heptio.com/aws-qs-next
+      https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md
+    Value: https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md
