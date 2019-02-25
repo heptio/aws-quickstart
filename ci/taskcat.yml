@@ -1,7 +1,7 @@
 global:
   marketplace-ami: false
   owner: quickstart-eng@amazon.com
-  qsname: quickstart-heptio
+  qsname: quickstart-vmware
   reporting: true
   regions:
     - ap-northeast-1
