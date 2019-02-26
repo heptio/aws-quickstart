@@ -140,6 +140,9 @@ while :; do
   if [[ $tries -gt 30 ]]; then # 5 minutes-ish
     echo "Sonobuoy did not finish after 5 minutes.  Master logs:"
     kubectl logs sonobuoy
+    echo "Sonobuoy status and logs:"
+    sonobuoy status
+    sonobuoy logs
     exit $ERRCODE_TIMEOUT
   fi
 done

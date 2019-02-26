@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-# This is where Heptio stores templates/scripts for the master branch of this repository
-S3_BUCKET=heptio-aws-quickstart-test
-S3_PREFIX=heptio/kubernetes/master/
+# This is where VMware stores templates/scripts for the master branch of this repository
+S3_BUCKET=vmware-aws-quickstart-test
+S3_PREFIX=vmware/kubernetes/master/
 
 # Where to place your cluster
 REGION=us-west-2
 AZ=us-west-2b
 
 # What to name your CloudFormation stack
-STACK=Heptio-Kubernetes
+STACK=VMware-Kubernetes
 
 # What SSH key you want to allow access to the cluster (must be created ahead of time in your AWS EC2 account)
 KEYNAME=mykey

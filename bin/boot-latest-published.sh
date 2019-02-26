@@ -5,7 +5,7 @@ REGION=us-west-2
 AZ=us-west-2b
 
 # What to name your CloudFormation stack
-STACK=Heptio-Kubernetes
+STACK=VMware-Kubernetes
 
 # Which SSH key you want to allow access to the cluster
 KEYNAME=laptop
@@ -19,7 +19,7 @@ INGRESS=0.0.0.0/0
 aws cloudformation create-stack \
   --region $REGION \
   --stack-name $STACK \
-  --template-url "https://s3.amazonaws.com/quickstart-reference/heptio/latest/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://s3.amazonaws.com/quickstart-reference/vmware/latest/templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue=$AZ \
     ParameterKey=KeyName,ParameterValue=$KEYNAME \
