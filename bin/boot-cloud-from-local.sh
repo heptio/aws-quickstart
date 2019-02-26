@@ -9,8 +9,8 @@ AVAILABILITY_ZONE="${AVAILABILITY_ZONE:-us-west-2a}"
 
 # Bucket may exist.
 # Can create a bucket with something like:
-# aws s3api create-bucket --bucket heptio-hello-world-idjfuiewhj --create-bucket-configuration LocationConstraint=us-west-2
-S3_BUCKET="${S3_BUCKET:-quickstart-heptio-com}"
+# aws s3api create-bucket --bucket vmware-hello-world-idjfuiewhj --create-bucket-configuration LocationConstraint=us-west-2
+S3_BUCKET="${S3_BUCKET:-quickstart-vmware-com}"
 
 # Will error if the bucket doesn't exist or you don't have permission to it.
 aws s3api head-bucket --bucket "${S3_BUCKET}"

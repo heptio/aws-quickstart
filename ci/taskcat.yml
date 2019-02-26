@@ -16,6 +16,6 @@ global:
     - us-west-2
 
 tests:
-  heptio:
+  vmware:
     parameter_input: kubernetes-cluster-with-new-vpc-inputs.json
     template_file: kubernetes-cluster-with-new-vpc.template
