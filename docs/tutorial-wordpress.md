@@ -6,7 +6,7 @@ This tutorial shows how to run WordPress from your Kubernetes cluster. [WordPres
 
 We use the [Helm][3] package manager to install the software. Helm is a tool for managing pre-configured Kubernetes objects. It's an easy way to install popular software on Kubernetes.
 
-Note that you'll be using default settings from both [VMware's AWS Quick Start][4] and Helm, so make sure the security options fit your use case.
+Note that you'll be using default settings from both [VMware's AWS Quick Start][6] and Helm, so make sure the security options fit your use case.
 
 Take a look at the [WordPress Helm configuration for Kubernetes][5].
 
@@ -200,15 +200,14 @@ Now you can log into the control panel for WordPress and start crafting your Wor
 [1]: http://docs.heptio.com/_images/banner-twitter.jpg
 [2]: https://wordpress.org/
 [3]: http://helm.sh/
-[4]: http://docs.heptio.com/aws.html
 [5]: https://github.com/kubernetes/charts/tree/master/stable/wordpress
-[6]: https://s3.amazonaws.com/quickstart-reference/heptio/latest/doc/heptio-kubernetes-on-the-aws-cloud.pdf
-[7]: http://docs.heptio.com/aws-cloudformation-k8s.html
-[8]: http://docs.heptio.com/content/tutorials/aws-cloudformation-k8s.html#optional-download-kubectl-configuration
+[6]: https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/doc/vmware-kubernetes-on-the-aws-cloud.pdf
+[7]: aws-cli.md
+[8]: aws-cli.md#4-optional-download-kubectl-configuration
 [9]: https://brew.sh
 [10]: https://github.com/kubernetes/helm/releases
 [11]: https://github.com/kubernetes/helm/blob/master/docs/quickstart.md
-[12]: http://docs.heptio.com/rbac.html
+[12]: rbac.md
 [13]: https://github.com/kubernetes/helm/issues/2224
 [14]: https://kubernetes.io/docs/admin/service-accounts-admin/
 [15]: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/

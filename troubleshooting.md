@@ -1,6 +1,6 @@
 # Troubleshooting
 
-In addition to the [documentation](http://docs.heptio.com/content/aws.html) available for the Heptio AWS Quick Start, this page outlines some troubleshooting tips if you're running into issues with your quick start.
+This page outlines some troubleshooting tips if you're running into issues with your quick start.
 
 ## Quick Start fails during stack creation
 

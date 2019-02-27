@@ -114,7 +114,7 @@ kubectl get nodes
 This Quick Start is developed as a set of AWS CloudFormation templates. This is
 a brief overview of the files in this repo, for more architecture details see
 the [Deployment
-Guide](https://s3.amazonaws.com/quickstart-reference/vmware/latest/doc/vmware-kubernetes-on-the-aws-cloud.pdf)
+Guide](https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/doc/vmware-kubernetes-on-the-aws-cloud.pdf)
 
 **The `templates` directory**:
 
