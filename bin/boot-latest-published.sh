@@ -19,7 +19,7 @@ INGRESS=0.0.0.0/0
 aws cloudformation create-stack \
   --region $REGION \
   --stack-name $STACK \
-  --template-url "https://s3.amazonaws.com/quickstart-reference/vmware/latest/templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/templates/kubernetes-cluster-with-new-vpc.template" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue=$AZ \
     ParameterKey=KeyName,ParameterValue=$KEYNAME \

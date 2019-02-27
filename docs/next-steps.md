@@ -1,6 +1,6 @@
 # Welcome to the Next Steps for your Kubernetes cluster.
 
-This guide is for [Kubernetes Quick Start](https://aws.amazon.com/quickstart/) admins and users. This guide assumes you have deployed the Kubernetes Quick Start by walking through [Amazon’s Quick Start PDF](https://s3.amazonaws.com/quickstart-reference/vmware/latest/doc/vmware-kubernetes-on-the-aws-cloud.pdf), which uses Amazon’s CloudFormation console.
+This guide is for [Kubernetes Quick Start](https://aws.amazon.com/quickstart/) admins and users. This guide assumes you have deployed the Kubernetes Quick Start by walking through [Amazon’s Quick Start PDF](https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/doc/vmware-kubernetes-on-the-aws-cloud.pdf), which uses Amazon’s CloudFormation console.
 
 Now that you have your Kubernetes stack on Amazon, we recommend setting up [WordPress with Helm](tutorial-wordpress.md) as a demo application to explore your new cluster.
 
@@ -32,7 +32,7 @@ If you’ve completed the Kubernetes Quick Start on AWS, we recommend that you t
  - Project Calico goes into detail on networking for Kubernetes: [Calico for Kubernetes](https://docs.projectcalico.org/v3.5/getting-started/kubernetes/)
 
 ## Architecture and decisions
-This CloudFormation template [(download)](https://s3.amazonaws.com/quickstart-reference/vmware/latest/templates/kubernetes-cluster-with-new-vpc.template) [(launch)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=k8s&templateURL=https://s3.amazonaws.com/quickstart-reference/vmware/latest/templates/kubernetes-cluster-with-new-vpc.template) creates two stacks: one that builds a wrapper virtual private cloud (VPC), and one that deploys the Kubernetes cluster into it. For advanced AWS users, you can [deploy just the Kubernetes stack](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=k8s&templateURL=https://s3.amazonaws.com/quickstart-reference/vmware/latest/templates/kubernetes-cluster.template) into your existing AWS architecture. This architecture list is for the template that creates a new VPC for your Kubernetes cluster.
+This CloudFormation template [(download)](https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/templates/kubernetes-cluster-with-new-vpc.template) [(launch)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=k8s&templateURL=https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/templates/kubernetes-cluster-with-new-vpc.template) creates two stacks: one that builds a wrapper virtual private cloud (VPC), and one that deploys the Kubernetes cluster into it. For advanced AWS users, you can [deploy just the Kubernetes stack](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=k8s&templateURL=https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/templates/kubernetes-cluster.template) into your existing AWS architecture. This architecture list is for the template that creates a new VPC for your Kubernetes cluster.
 
 The Quick Start builds Kubernetes 1.13.2.
 
