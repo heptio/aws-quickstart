@@ -144,9 +144,9 @@ For a full reference on the `kubectl expose` command, see the [Kubernetes Commun
 
 [1]: http://docs.heptio.com/_images/banner-twitter.jpg
 [2]: https://aws.amazon.com/elasticloadbalancing/
-[3]: https://s3.amazonaws.com/quickstart-reference/heptio/latest/doc/heptio-kubernetes-on-the-aws-cloud.pdf
-[4]: http://docs.heptio.com/aws-cloudformation-k8s.html
-[5]: http://docs.heptio.com/content/tutorials/aws-cloudformation-k8s.html#optional-download-kubectl-configuration
+[3]: https://aws-quickstart.s3.amazonaws.com/quickstart-vmware/doc/vmware-kubernetes-on-the-aws-cloud.pdf
+[4]: aws-cli.md
+[5]: aws-cli.md#4-optional-download-kubectl-configuration
 [6]: https://github.com/kubernetes/contrib/tree/master/ingress/echoheaders
 [7]: http://docs.heptio.com/_images/echoheaders-screenshot.png
 [8]: https://kubernetes.io/docs/user-guide/services/
