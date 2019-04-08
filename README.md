@@ -45,7 +45,7 @@ Quick Start page using the AWS Console.
 
 **[Launch Latest Quickstart Now][launch]**
 
-[launch]: https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?param_QSS3BucketName=vmware-aws-quickstart-test&param_QSS3KeyPrefix=vmware%2Fkubernetes%2Fmaster%2F&stackName=VMware-Kubernetes&templateURL=https:%2F%2Fvmware-aws-quickstart-test.s3.amazonaws.com%2Fvmware%2Fkubernetes%2Fmaster%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template
+[launch]: https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=VMware-Kubernetes&templateURL=https:%2F%2Faws-quickstart.s3.amazonaws.com%2Fquickstart-vmware%2Ftemplates%2Fkubernetes-cluster-with-new-vpc.template
 
 ### Master branch from the command line
 
