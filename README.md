@@ -3,7 +3,7 @@
 # VMware AWS Quickstart
 
 [<img
-src="https://raw.githubusercontent.com/cncf/artwork/master/kubernetes/certified-kubernetes/1.11/color/certified-kubernetes-1.11-color.png"
+src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/1.11/color/certified-kubernetes-1.11-color.png"
 align="right" width="200px" alt="certified kubernetes 1.11">][certified] These
 are the CloudFormation templates for the VMware AWS Quick Start.  This is where
 active development is happening.
