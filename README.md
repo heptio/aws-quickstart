@@ -1,13 +1,11 @@
 ![AWS Quick Start for Kubernets](images/banner.jpg)
 
+# DEPRECATED: This project is no longer maintained.
+
 # VMware AWS Quickstart
 
-[<img
-src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/1.13/color/certified-kubernetes-1.13-color.png"
-align="right" width="200px" alt="certified kubernetes 1.11">][certified] These
-are the CloudFormation templates for the VMware AWS Quick Start.  This is where
-active development is happening.
-
+These
+are the CloudFormation templates for the VMware AWS Quick Start.
 Details of the Quick Start are in this [Heptio Blog post][details].
 
 Amazon's page for this is [here][amazon].
