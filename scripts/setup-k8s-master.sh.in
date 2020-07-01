@@ -26,10 +26,10 @@ test -n "{{LoadBalancerDns}}"
 test -n "{{LoadBalancerName}}"
 test -n "{{ClusterToken}}"
 test -n "{{NetworkingProvider}}"
-test -n "{{NetworkingProviderUrl}}"
-test -n "{{DashboardUrl}}"
-test -n "{{StorageClassUrl}}"
-test -n "{{NetworkPolicyUrl}}"
+test -n "/tmp/NetworkingProvider.yaml"
+test -n "/tmp/dashboard.yaml"
+test -n "/tmp/default.storageclass.yaml"
+test -n "/tmp/network-policy.yaml"
 test -n "{{Region}}"
 test -n "{{ClusterInfoBucket}}"
 test -n "{{ClusterDNSProvider}}"
@@ -115,16 +115,16 @@ kubectl create clusterrolebinding admin-cluster-binding --clusterrole=cluster-ad
 
 # Add-on for networking providers, so pods can communicate.  see the scripts/
 # directory of the quickstart.  Currently either calico.yaml or weave.yaml
-kubectl apply -f {{NetworkingProviderUrl}}
+kubectl apply -f /tmp/NetworkingProvider.yaml
 
 # Install the kubernetes dashboard by default
-kubectl apply -f {{DashboardUrl}}
+kubectl apply -f /tmp/dashboard.yaml
 
 # Install the default StorageClass
-kubectl apply -f {{StorageClassUrl}}
+kubectl apply -f /tmp/default.storageclass.yaml
 
 # Set up the network policy blocking the AWS metadata endpoint from the default namespace.
-kubectl apply -f {{NetworkPolicyUrl}}
+kubectl apply -f /tmp/network-policy.yaml
 
 # Use kubeadm's kubeconfig command to grab a client-cert-authenticated
 # kubeconfig file for administrative access to the cluster.

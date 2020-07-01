@@ -58,6 +58,7 @@ Metadata:
         default: Advanced
       Parameters:
       - QSS3BucketName
+      - QSS3BucketRegion
       - QSS3KeyPrefix
       - ClusterAssociation
 
@@ -84,6 +85,8 @@ Metadata:
         default: Node Capacity
       QSS3BucketName:
         default: S3 Bucket
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
       QSS3KeyPrefix:
         default: S3 Key Prefix
       ClusterAssociation:
@@ -325,7 +328,6 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-
     Default: aws-quickstart
     Description: Only change this if you have set up assets, like your own networking
       configuration, in an S3 bucket. This and the S3 Key Prefix parameter let you access
@@ -336,6 +338,10 @@ Parameters:
       It cannot start or end with a hyphen (-).
     Type: String
 
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.
+    Type: String
   QSS3KeyPrefix:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters, uppercase
@@ -407,6 +413,7 @@ Mappings:
       '64': ami-0d4f0ff8fb87a039c
 # Helper Conditions which help find the right values for resources
 Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
   AssociationProvidedCondition:
     Fn::Not:
     - Fn::Equals:
@@ -417,6 +424,7 @@ Conditions:
     - Fn::Equals:
       - !Ref LoadBalancerSubnetId
       - ''
+  NetowrkProviderCalico: !Equals [!Ref NetworkingProvider, 'calico']
 
 # Resources are the AWS services we want to actually create as part of the Stack
 Resources:
@@ -444,6 +452,11 @@ Resources:
     Type: AWS::EC2::Instance
     DependsOn: ApiLoadBalancer
     Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Auth:
+          buckets: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+          roleName: !Ref MasterRole
+          type: S3
       AWS::CloudFormation::Init:
         configSets:
           master-setup: master-setup
@@ -451,15 +464,28 @@ Resources:
           files:
             # Script that will allow for development kubernetes binaries to replace the pre-packaged AMI binaries.
             "/tmp/kubernetes-override-binaries.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               mode: '000755'
+              authentication: S3Auth
               context:
-                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}bin/"
-
+                BaseBinaryUrl:
+                  !Sub
+                    - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}bin/"
+                    - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                      S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             # Configuration file for the cloudwatch agent. The file is a Mustache template, and we're creating it with
             # the below context (mainly to substitute in the AWS Stack Name for the logging group.)
             "/tmp/kubernetes-awslogs.conf":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              authentication: S3Auth
               context:
                 StackName: !Ref AWS::StackName
 
@@ -470,36 +496,81 @@ Resources:
 
             # systemd init script for the Cloudwatch logs agent
             "/etc/systemd/system/awslogs.service":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/awslogs.service"
-
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/awslogs.service"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              authentication: S3Auth
             # setup kubelet hostname
             "/tmp/setup-kubelet-hostname.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-kubelet-hostname.sh"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/setup-kubelet-hostname.sh"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               mode: '000755'
-
+              authentication: S3Auth
             # Setup script for initializing the Kubernetes master instance.  This is where most of the cluster
             # initialization happens.  See scripts/setup-k8s-master.sh in the Quick Start repo for details.
-            "/tmp/setup-k8s-master.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-k8s-master.sh.in"
+            "/tmp/NetworkingProvider.yaml":
+              source:
+                !Sub
+                - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/${NetworkingProvider}.yaml"
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               mode: '000755'
+              authentication: S3Auth
+            "/tmp/dashboard.yaml":
+              source:
+                !Sub
+                - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/dashboard.yaml"
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              mode: '000755'
+              authentication: S3Auth
+            "/tmp/default.storageclass.yaml":
+              source:
+                !Sub
+                - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/default.storageclass.yaml"
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              mode: '000755'
+              authentication: S3Auth
+            "/tmp/network-policy.yaml":
+              source:
+                !Sub
+                - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/network-policy.yaml"
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              mode: '000755'
+              authentication: S3Auth
+            "/tmp/setup-k8s-master.sh":
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/setup-k8s-master.sh.in"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              mode: '000755'
+              authentication: S3Auth
               context:
                 LoadBalancerDns: !GetAtt ApiLoadBalancer.DNSName
                 LoadBalancerName: !Ref ApiLoadBalancer
                 ClusterToken: !GetAtt KubeadmToken.Token
                 ClusterDNSProvider: !Ref ClusterDNSProvider
                 NetworkingProvider: !Ref NetworkingProvider
-                NetworkingProviderUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/${NetworkingProvider}.yaml"
-                DashboardUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/dashboard.yaml"
-                StorageClassUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/default.storageclass.yaml"
-                NetworkPolicyUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/network-policy.yaml"
                 ClusterInfoBucket: !Ref ClusterInfoBucket
                 Region: !Ref AWS::Region
 
             # patch kube proxy
             "/tmp/patch-kube-proxy.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/patch-kube-proxy.sh"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/patch-kube-proxy.sh"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               mode: '000755'
-
+              authentication: S3Auth
           commands:
             # Override the AMI binaries with any kubelet/kubeadm/kubectl binaries in the S3 bucket
             "00-kubernetes-override-binaries":
@@ -531,7 +602,7 @@ Resources:
       KeyName: !Ref KeyName
       NetworkInterfaces:
       - DeleteOnTermination: true
-        DeviceIndex: 0
+        DeviceIndex: '0'
         SubnetId: !Ref ClusterSubnetId
         # Joins the ClusterSecGroup Security Group for cluster communication and SSH access
         # The ClusterSecGroupCrossTalk rules allow all instances in the same stack to communicate internally
@@ -644,7 +715,7 @@ Resources:
               return token
       Handler: "index.handler"
       Runtime: "python3.7"
-      Timeout: "5"
+      Timeout: 5
       Role: !GetAtt LambdaExecutionRole.Arn
 
   # A Custom resource that uses the lambda function to generate our cluster token
@@ -667,11 +738,11 @@ Resources:
       MetricName: StatusCheckFailed_System
       Statistic: Minimum
       # 60-second periods (1 minute)
-      Period: '60'
+      Period: 60
       # 5-minute check-ins
-      EvaluationPeriods: '5'
+      EvaluationPeriods: 5
       ComparisonOperator: GreaterThanThreshold
-      Threshold: '0'
+      Threshold: 0
       # This is the call that actually tries to recover the instance
       AlarmActions:
         - !Sub "arn:aws:automate:${AWS::Region}:ec2:recover"
@@ -710,14 +781,14 @@ Resources:
       Tags:
       - Key: Name
         Value: k8s-node
-        PropagateAtLaunch: 'true'
+        PropagateAtLaunch: true
       - Key: KubernetesCluster
         Value:
           Fn::If:
           - AssociationProvidedCondition
           - !Ref ClusterAssociation
           - !Ref AWS::StackName
-        PropagateAtLaunch: 'true'
+        PropagateAtLaunch: true
         # Also tag it with kubernetes.io/cluster/clustername=owned, which is the newer convention for cluster resources
       - Key:
           Fn::Sub:
@@ -728,17 +799,22 @@ Resources:
               - !Ref ClusterAssociation
               - !Ref AWS::StackName
         Value: 'owned'
-        PropagateAtLaunch: 'true'
+        PropagateAtLaunch: true
     # Tells the group how many instances to update at a time, if an update is applied
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: '1'
-        MaxBatchSize: '1'
+        MinInstancesInService: 1
+        MaxBatchSize: 1
 
   # This tells AWS what kinds of servers we want in our Auto Scaling Group
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Auth:
+          buckets: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+          roleName: !Ref NodeRole
+          type: S3
       AWS::CloudFormation::Init:
         configSets:
           node-setup: node-setup
@@ -746,25 +822,54 @@ Resources:
           # (See comments in the master instance Metadata for details.)
           files:
             "/tmp/kubernetes-override-binaries.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               mode: '000755'
+              authentication: S3Auth
               context:
-                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}bin/"
+                BaseBinaryUrl:
+                  !Sub
+                    - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}bin/"
+                    - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                      S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             "/tmp/kubernetes-awslogs.conf":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              authentication: S3Auth
               context:
                 StackName: !Ref AWS::StackName
             "/usr/local/aws/awslogs-agent-setup.py":
               source: https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
               mode: '000755'
             "/etc/systemd/system/awslogs.service":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/awslogs.service"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/awslogs.service"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              authentication: S3Auth
             "/tmp/setup-kubelet-hostname.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-kubelet-hostname.sh"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/setup-kubelet-hostname.sh"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               mode: '000755'
+              authentication: S3Auth
             "/tmp/setup-k8s-node.sh":
               mode: '000755'
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/setup-k8s-node.sh.in"
+              source:
+                !Sub
+                  - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/setup-k8s-node.sh.in"
+                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              authentication: S3Auth
               context:
                 K8sMasterPrivateIp: !GetAtt K8sMasterInstance.PrivateIp
                 ClusterToken: !GetAtt KubeadmToken.Token
@@ -863,8 +968,8 @@ Resources:
       GroupId: !Ref ClusterSecGroup
       SourceSecurityGroupId: !Ref ClusterSecGroup
       IpProtocol: '-1'
-      FromPort: '0'
-      ToPort: '65535'
+      FromPort: 0
+      ToPort: 65535
 
   # - Open up port 22 for SSH into each machine
   # The allowed locations are chosen by the user in the SSHLocation parameter
@@ -875,8 +980,8 @@ Resources:
     Properties:
       GroupId: !Ref ClusterSecGroup
       IpProtocol: tcp
-      FromPort: '22'
-      ToPort: '22'
+      FromPort: 22
+      ToPort: 22
       CidrIp: !Ref SSHLocation
 
   # Allow the apiserver load balancer to talk to the cluster on port 6443
@@ -887,8 +992,8 @@ Resources:
     Properties:
       GroupId: !Ref ClusterSecGroup
       IpProtocol: tcp
-      FromPort: '6443'
-      ToPort: '6443'
+      FromPort: 6443
+      ToPort: 6443
       SourceSecurityGroupId: !Ref ApiLoadBalancerSecGroup
 
   # IAM role for nodes http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
@@ -943,7 +1048,18 @@ Resources:
           - Effect: Allow
             Action:
             - s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${ClusterInfoBucket}/cluster-info.yaml"
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${ClusterInfoBucket}/cluster-info.yaml"
+
+      - PolicyName: aws-quick-start-s3-policy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - s3:GetObject
+              Resource: !Sub
+                - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+                - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              Effect: Allow
 
   # Resource that creates the node IAM role
   NodeInstanceProfile:
@@ -1009,7 +1125,18 @@ Resources:
           - Effect: Allow
             Action:
             - s3:PutObject
-            Resource: !Sub "arn:aws:s3:::${ClusterInfoBucket}/cluster-info.yaml"
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${ClusterInfoBucket}/cluster-info.yaml"
+
+      - PolicyName: aws-quick-start-s3-policy-master
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - s3:GetObject
+              Resource: !Sub
+                - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+                - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              Effect: Allow
 
   # Bind the MasterRole to a profile for the VM instance.
   MasterInstanceProfile:
@@ -1028,13 +1155,13 @@ Resources:
       Scheme: !Ref LoadBalancerType
       Listeners:
       - Protocol: TCP
-        InstancePort: 6443
+        InstancePort: '6443'
         InstanceProtocol: TCP
-        LoadBalancerPort: 443
+        LoadBalancerPort: '443'
       - Protocol: TCP
-        InstancePort: 6443
+        InstancePort: '6443'
         InstanceProtocol: TCP
-        LoadBalancerPort: 6443
+        LoadBalancerPort: '6443'
       HealthCheck:
         Target: TCP:6443
         HealthyThreshold: '3'
@@ -1118,10 +1245,10 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
+            Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
           - Effect: Allow
             Action: ['s3:DeleteObject']
-            Resource: [!Sub "arn:aws:s3:::${ClusterInfoBucket}/cluster-info.yaml"]
+            Resource: [!Sub "arn:${AWS::Partition}:s3:::${ClusterInfoBucket}/cluster-info.yaml"]
 
   # CleanupClusterInfo backs the custom resource defined below.
   # When the custom resource gets created, deleted or updated this function will be executed.
@@ -1150,7 +1277,7 @@ Resources:
                 cfnresponse.send(event, context, cfnresponse.FAILED, {})
       Handler: "index.lambda_handler"
       Runtime: "python3.6"
-      Timeout: "5"
+      Timeout: 5
       Role: !GetAtt CleanupClusterInfoRole.Arn
 
   CleanupClusterInfoOnDelete:

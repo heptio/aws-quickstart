@@ -18,4 +18,4 @@ global:
 tests:
   vmware:
     parameter_input: kubernetes-cluster-with-new-vpc-inputs.json
-    template_file: kubernetes-cluster-with-new-vpc.template
+    template_file: kubernetes-cluster-with-new-vpc.template.yaml

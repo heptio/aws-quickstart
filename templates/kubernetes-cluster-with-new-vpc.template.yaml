@@ -50,6 +50,7 @@ Metadata:
       - DiskSizeGb
       - BastionInstanceType
       - QSS3BucketName
+      - QSS3BucketRegion
       - QSS3KeyPrefix
 
     ParameterLabels:
@@ -75,6 +76,8 @@ Metadata:
         default: Node Capacity
       QSS3BucketName:
         default: S3 Bucket
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
       QSS3KeyPrefix:
         default: S3 Key Prefix
       NetworkingProvider:
@@ -436,7 +439,10 @@ Parameters:
       Quick Start bucket name can include numbers, lowercase letters, uppercase
       letters, and hyphens (-). It cannot start or end with a hyphen (-).
     Type: String
-
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.
+    Type: String
   QSS3KeyPrefix:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase
@@ -503,6 +509,7 @@ Mappings:
     us-west-2:
       '64': ami-0dbd6cabe4749f197
 Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
   UsEast1Condition:
     Fn::Equals:
     - !Ref AWS::Region
@@ -514,8 +521,8 @@ Resources:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VPCCIDR
-      EnableDnsSupport: 'true'
-      EnableDnsHostnames: 'true'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
@@ -657,7 +664,7 @@ Resources:
       NetworkInterfaces:
       - AssociatePublicIpAddress: true
         DeleteOnTermination: true
-        DeviceIndex: 0
+        DeviceIndex: '0'
         SubnetId: !Ref PublicSubnet
         # This address is chosen because our public subnet begins at 10.0.128.0/20
         PrivateIpAddress: '10.0.128.5'
@@ -669,7 +676,8 @@ Resources:
       KeyName: !Ref KeyName
       UserData:
         Fn::Base64:
-          Fn::Sub: |
+          !Sub
+          - |
             #!/bin/bash
 
             BASTION_BOOTSTRAP_FILE=bastion_bootstrap.sh
@@ -682,7 +690,10 @@ Resources:
             apt-get -y update && apt-get -y install python-pip
             pip install --upgrade pip &> /dev/null
 
-            ./$BASTION_BOOTSTRAP_FILE --banner https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/banner_message.txt --enable true
+            ./$BASTION_BOOTSTRAP_FILE --banner  https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/banner_message.txt --enable true
+
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
 
   # Open up port 22 for SSH for the bastion host
   BastionSecurityGroup:
@@ -692,8 +703,8 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
       - IpProtocol: tcp
-        FromPort: '22'
-        ToPort: '22'
+        FromPort: 22
+        ToPort: 22
         CidrIp: !Ref AdminIngressLocation
 
   # Call the cluster template and supply its parameters
@@ -702,7 +713,11 @@ Resources:
   K8sStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/kubernetes-cluster.template"
+      TemplateURL:
+        !Sub
+          - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/kubernetes-cluster.template.yaml"
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         VPCID: !Ref VPC
         NATEIP: !Ref NATEIP
@@ -716,6 +731,7 @@ Resources:
         KeyName: !Ref KeyName
         K8sNodeCapacity: !Ref K8sNodeCapacity
         QSS3BucketName: !Ref QSS3BucketName
+        QSS3BucketRegion: !Ref QSS3BucketRegion
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         ClusterAssociation: !Ref AWS::StackName
         NetworkingProvider: !Ref NetworkingProvider
