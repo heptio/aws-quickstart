@@ -44,7 +44,7 @@ aws s3 sync --acl=public-read ./scripts "s3://${S3_BUCKET}/${S3_PREFIX}scripts/"
 aws cloudformation create-stack \
   --region "${REGION}" \
   --stack-name "${STACK}" \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template.yaml" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue="${AVAILABILITY_ZONE}" \
     ParameterKey=KeyName,ParameterValue="${KEYNAME}" \

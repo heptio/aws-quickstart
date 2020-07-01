@@ -20,7 +20,7 @@ INGRESS=0.0.0.0/0
 aws cloudformation create-stack \
   --region $REGION \
   --stack-name $STACK \
-  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template" \
+  --template-url "https://${S3_BUCKET}.s3.amazonaws.com/${S3_PREFIX}templates/kubernetes-cluster-with-new-vpc.template.yaml" \
   --parameters \
     ParameterKey=AvailabilityZone,ParameterValue=$AZ \
     ParameterKey=KeyName,ParameterValue=$KEYNAME \
