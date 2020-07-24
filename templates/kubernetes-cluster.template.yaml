@@ -14,7 +14,7 @@
 
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'QS(5042) Kubernetes AWS CloudFormation Template: Create a Kubernetes
+Description: '(qs-1qup6raon) Kubernetes AWS CloudFormation Template: Create a Kubernetes
   cluster in an existing VPC. This template is for users who want to add
   a Kubernetes cluster to existing AWS infrastructure. The master node is
   an auto-recovering Amazon EC2 instance with additional EC2 instances in an
