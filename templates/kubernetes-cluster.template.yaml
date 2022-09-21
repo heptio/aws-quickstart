@@ -1275,8 +1275,8 @@ Resources:
                 except Exception as e:
                     print(e)
                 cfnresponse.send(event, context, cfnresponse.FAILED, {})
-      Handler: "index.lambda_handler"
-      Runtime: "python3.6"
+      Handler: index.lambda_handler
+      Runtime: python3.9
       Timeout: 5
       Role: !GetAtt CleanupClusterInfoRole.Arn
 
