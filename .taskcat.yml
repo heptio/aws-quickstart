@@ -13,7 +13,6 @@ project:
   - us-east-2
   - us-west-1
   - us-west-2
-  s3_bucket: ''
 tests:
   vmware:
     parameters:
@@ -33,5 +32,4 @@ tests:
     - us-east-2
     - us-west-1
     - us-west-2
-    s3_bucket: ''
     template: templates/kubernetes-cluster-with-new-vpc.template.yaml
