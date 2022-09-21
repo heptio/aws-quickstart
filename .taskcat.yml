@@ -16,7 +16,7 @@ project:
 tests:
   vmware:
     parameters:
-      AdminIngressLocation: 0.0.0.0/0
+      AdminIngressLocation: 127.0.0.1/32
       AvailabilityZone: $[taskcat_genaz_1]
       KeyName: --override--
       QSS3BucketName: $[taskcat_autobucket]
