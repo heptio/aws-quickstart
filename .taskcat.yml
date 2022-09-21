@@ -18,7 +18,7 @@ tests:
     parameters:
       AdminIngressLocation: 0.0.0.0/0
       AvailabilityZone: $[taskcat_genaz_1]
-      KeyName: tonynv
+      KeyName: --override--
       QSS3BucketName: $[taskcat_autobucket]
       QSS3BucketRegion: $[taskcat_current_region]
     regions:
