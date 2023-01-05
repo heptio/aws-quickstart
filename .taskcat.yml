@@ -13,13 +13,12 @@ project:
   - us-east-2
   - us-west-1
   - us-west-2
-  s3_bucket: ''
 tests:
   vmware:
     parameters:
-      AdminIngressLocation: 0.0.0.0/0
+      AdminIngressLocation: 127.0.0.1/32
       AvailabilityZone: $[taskcat_genaz_1]
-      KeyName: tonynv
+      KeyName: --override--
       QSS3BucketName: $[taskcat_autobucket]
       QSS3BucketRegion: $[taskcat_current_region]
     regions:
@@ -33,5 +32,4 @@ tests:
     - us-east-2
     - us-west-1
     - us-west-2
-    s3_bucket: ''
     template: templates/kubernetes-cluster-with-new-vpc.template.yaml
